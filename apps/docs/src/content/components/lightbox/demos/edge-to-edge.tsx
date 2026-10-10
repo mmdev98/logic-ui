@@ -48,21 +48,18 @@ export default function ExampleLightboxEdgeToEdge() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={local.Viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={local.Item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={local.Item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <header className={`${local.TopBar} ${classes.control}`}>
             <Lightbox.Close className={local.BarButton}>
               <CloseIcon />
             </Lightbox.Close>
-            <Lightbox.Value className={local.Title} />
+            <Lightbox.Counter className={local.Title} />
             {/* Balances the close button so the counter stays centred. */}
             <span aria-hidden className="size-10" />
           </header>

@@ -22,7 +22,7 @@ const local = {
   AvatarFallback: "size-full animate-pulse bg-white/15",
 };
 
-export default function ExampleLightboxThumbnails() {
+export default function ExampleLightboxThumbnailList() {
   return (
     <Lightbox.Root items={photos}>
       <DemoTriggers items={photos.slice(0, 4)} />
@@ -32,21 +32,20 @@ export default function ExampleLightboxThumbnails() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={local.Viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={local.Item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={local.Item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
             <CloseIcon />
           </Lightbox.Close>
           {/* ← → show the previous and next photo; drag or scroll the strip to browse. */}
-          <Lightbox.Thumbnails className={`${local.Strip} ${classes.control}`}>
+          <Lightbox.ThumbnailList
+            className={`${local.Strip} ${classes.control}`}
+          >
             {(photo: Photo) => (
               <Lightbox.Thumbnail
                 aria-label={photo.alt}
@@ -63,7 +62,7 @@ export default function ExampleLightboxThumbnails() {
                 </Avatar.Root>
               </Lightbox.Thumbnail>
             )}
-          </Lightbox.Thumbnails>
+          </Lightbox.ThumbnailList>
         </Lightbox.Popup>
       </Lightbox.Portal>
     </Lightbox.Root>

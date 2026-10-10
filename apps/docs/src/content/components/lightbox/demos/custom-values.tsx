@@ -38,9 +38,9 @@ export default function ExampleLightboxCustomValues() {
               <ChevronIcon direction="left" />
             </Lightbox.Previous>
             {/* A function child formats the position and the scale. */}
-            <Lightbox.Value className={classes.value}>
+            <Lightbox.Counter className={classes.value}>
               {(state) => `Photo ${state.index + 1} of ${state.count}`}
-            </Lightbox.Value>
+            </Lightbox.Counter>
             <Lightbox.Next
               render={<Toolbar.Button />}
               className={classes.toolbarButton}
@@ -55,7 +55,7 @@ export default function ExampleLightboxCustomValues() {
               −
             </Lightbox.ZoomOut>
             <Lightbox.ZoomValue className={classes.value}>
-              {(scale) => `${zoomFormat.format(scale)}×`}
+              {(state) => `${zoomFormat.format(state.scale)}×`}
             </Lightbox.ZoomValue>
             <Lightbox.ZoomIn
               render={<Toolbar.Button />}

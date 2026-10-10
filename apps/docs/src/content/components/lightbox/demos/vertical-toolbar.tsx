@@ -38,14 +38,11 @@ export default function ExampleLightboxVerticalToolbar() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={classes.item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={classes.item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
@@ -64,7 +61,7 @@ export default function ExampleLightboxVerticalToolbar() {
             </Lightbox.ZoomIn>
             {/* Short enough for a narrow toolbar: 1.0x, 2.5x. */}
             <Lightbox.ZoomValue className={local.ZoomValue}>
-              {(scale) => `${scale.toFixed(1)}x`}
+              {(state) => `${state.scale.toFixed(1)}x`}
             </Lightbox.ZoomValue>
             <Lightbox.ZoomOut
               render={<Toolbar.Button />}

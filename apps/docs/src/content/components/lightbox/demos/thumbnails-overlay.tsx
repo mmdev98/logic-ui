@@ -18,7 +18,7 @@ const local = {
   Image: "size-full object-cover",
 };
 
-export default function ExampleLightboxThumbnailsOverlay() {
+export default function ExampleLightboxThumbnailListOverlay() {
   return (
     <Lightbox.Root items={photos}>
       <DemoTriggers items={photos.slice(0, 4)} />
@@ -28,14 +28,11 @@ export default function ExampleLightboxThumbnailsOverlay() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={classes.item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={classes.item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
@@ -46,7 +43,7 @@ export default function ExampleLightboxThumbnailsOverlay() {
             <Lightbox.Description className={local.Caption}>
               {(photo: Photo) => photo.caption}
             </Lightbox.Description>
-            <Lightbox.Thumbnails
+            <Lightbox.ThumbnailList
               className={`${local.Strip} ${classes.hideScrollbar} ${classes.fadeX}`}
             >
               {(photo: Photo) => (
@@ -61,7 +58,7 @@ export default function ExampleLightboxThumbnailsOverlay() {
                   />
                 </Lightbox.Thumbnail>
               )}
-            </Lightbox.Thumbnails>
+            </Lightbox.ThumbnailList>
           </div>
         </Lightbox.Popup>
       </Lightbox.Portal>

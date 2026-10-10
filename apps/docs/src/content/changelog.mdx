@@ -14,28 +14,47 @@ breaking change is listed under its release.
   `onValueChange` (the open item's value, `null` while closed) instead of `open` /
   `defaultOpen` / `onOpenChange` and `index` / `defaultIndex` / `onIndexChange`. An item's
   value is its `id`, or what the new `itemToValue` returns. `Trigger` takes `value` instead of
-  `index`, and `Item` takes no `index`. The open item stays open when items are added,
-  removed or reordered.
-- **Items can have any shape.** `GalleryItemData` is removed. `Image` takes its `src`, `alt`,
-  `width` and `height` as props instead of reading them from the item, and `Description`
-  takes a function child to show the item's caption: `{(photo) => photo.caption}`.
-  `loadImage` receives your item.
+  `index`. The open item stays open when items are added, removed or reordered.
+- **`Item` is now `Slide`**, and takes no `index`: return it from the function passed to
+  `Viewport`. With thumbnails, the slides are their tab panels.
+- **`Image` is replaced by `Media`**, which wraps your own `<img>`, `<video>` or `<iframe>`:
+  `<Lightbox.Media width={photo.width} height={photo.height}><img src={photo.src} alt={photo.alt} /></Lightbox.Media>`.
+  It takes the natural `width` and `height`; the `src` and `alt` go on your element. The
+  whole box flies and follows the drag to close, and only an `<img>` zooms. `loadImage` is
+  now `loadMedia` (and `loadLightboxImage` is `loadLightboxMedia`), and `LightboxImageStatus`
+  is `LightboxMediaStatus`.
+- **Items can have any shape.** `GalleryItemData` is removed. The parts take what they need
+  as props, and `Description` takes a function child to show the item's caption:
+  `{(photo) => photo.caption}`. `loadMedia` receives your item.
+- **`Value` is now `Counter`.**
+- **`ZoomValue`'s function child receives its state**, `{(state) => state.scale}`, instead of
+  the scale.
 - **Removed `List` and `More`.** Lay out the triggers with your own elements.
 - **Removed `Toolbar` and `Separator`.** Use Base UI's [Toolbar](/docs/components/toolbar)
   and render each action as a `Toolbar.Button`: `<Lightbox.Next render={<Toolbar.Button />} />`.
 - **Removed `Delete` and `Download`.** Build them as buttons in the popup.
-- **`Image`'s `data-loaded` is replaced** by `data-loading` and `data-error`.
+- **`Image`'s `data-loaded` is replaced** by `data-loading` and `data-error`, on `Media` and
+  its `Slide`.
 
 ### New features
 
 - `Lightbox.createHandle()` links triggers placed outside `Root` to it, like Base UI's detached
   triggers, and opens or closes the lightbox from code.
-- `LoadingIndicator` and `Fallback` show while the image loads and when it fails. `Item` has
-  `data-loading` and `data-error`.
-- `Thumbnails` and `Thumbnail`: a strip of thumbnails inside the viewer, a single tab stop with
-  `aria-current` on the item shown.
+- **Any media.** `Media` shows a video or an embed as well as an image, and reads its loading
+  state from the media's own events. A video pauses when its slide is no longer shown.
+- `ThumbnailList` and `Thumbnail`: a strip of thumbnails inside the viewer, a tab list that is
+  a single tab stop, with `aria-selected` on the item shown. `ThumbnailIndicator` is one
+  element that glides to the active thumbnail, with its box as CSS variables.
+- `Caption`: a slide's own text, which moves with it and describes it for screen readers.
+- **Animation attributes.** `Popup`, `Viewport`, `Slide`, `Title`, `Description`, `Counter`,
+  `Caption` and `ThumbnailIndicator` have `data-activation-direction` (`left`, `right` or
+  `none`), the side the item shown came from. `Title` and `Description` with a function
+  child, `Counter` and `Caption` have `data-starting-style` for a frame when the item
+  changes, to animate the new text in. `Title` takes a function child, like `Description`.
+- `Popup`'s `className`, `style` and `render` functions receive `zoomed`, `controlsHidden` and
+  `activationDirection`. `Viewport` is a labelled carousel region.
 - The arrow keys stay with a widget inside the popup that uses them itself, such as a Base UI
-  toolbar or a text field, instead of also changing the image.
+  toolbar, a text field or a video player, instead of also changing the image.
 
 ## v0.1.0
 

@@ -7,11 +7,12 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Image: "data-error:invisible",
+  Media: "group",
+  Image: "group-data-error:invisible",
   Loading:
-    "absolute inset-0 m-auto size-8 animate-spin rounded-full border-2 border-white/25 border-t-white",
+    "absolute inset-0 m-auto hidden size-8 animate-spin rounded-full border-2 border-white/25 border-t-white group-data-loading:block",
   Fallback:
-    "absolute inset-0 m-auto flex h-fit w-[min(20rem,calc(100%-2rem))] flex-col items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900/90 px-6 py-7 text-center backdrop-blur-md",
+    "absolute inset-0 m-auto hidden h-fit w-[min(20rem,calc(100%-2rem))] flex-col items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900/90 px-6 py-7 text-center backdrop-blur-md group-data-error:flex",
   Icon: "size-10 text-neutral-500",
   Title: "m-0 text-base font-semibold",
   Text: "m-0 text-sm text-neutral-400",
@@ -42,7 +43,7 @@ function getSrc(photo: DemoPhoto, attempts: number) {
 }
 
 export default function ExampleLightboxErrorsRetry() {
-  // Retries per photo: changing `src` makes `Lightbox.Image` load again.
+  // Retries per photo: changing `src` makes `Lightbox.Media` load again.
   const [attempts, setAttempts] = React.useState<Record<string, number>>({});
   const retry = (id: string) =>
     setAttempts((current) => ({ ...current, [id]: (current[id] ?? 0) + 1 }));
@@ -70,43 +71,48 @@ export default function ExampleLightboxErrorsRetry() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: DemoPhoto) => (
-              <Lightbox.Item className={classes.item}>
-                <Lightbox.Image
-                  src={getSrc(photo, attempts[photo.id] ?? 0)}
-                  alt={photo.alt}
+              <Lightbox.Slide className={classes.item}>
+                <Lightbox.Media
                   width={photo.width}
                   height={photo.height}
-                  className={local.Image}
-                />
-                <Lightbox.LoadingIndicator className={local.Loading} />
-                <Lightbox.Fallback className={local.Fallback} role="alert">
-                  <BrokenImageIcon className={local.Icon} />
-                  <p className={local.Title}>Couldn’t load this photo</p>
-                  <p className={local.Text}>
-                    {photo.alt}.{" "}
-                    {attempts[photo.id]
-                      ? `Tried ${attempts[photo.id] + 1} times.`
-                      : "Check your connection and try again."}
-                  </p>
-                  <div className={local.Actions}>
-                    <button
-                      type="button"
-                      className={local.Button}
-                      onClick={() => retry(photo.id)}
-                    >
-                      Retry
-                    </button>
-                    <a
-                      href={photo.src}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={local.Link}
-                    >
-                      Open original
-                    </a>
+                  className={local.Media}
+                >
+                  {/* A new `src` loads again: the spinner shows meanwhile. */}
+                  <img
+                    src={getSrc(photo, attempts[photo.id] ?? 0)}
+                    alt={photo.alt}
+                    className={local.Image}
+                  />
+                  <span className={local.Loading} aria-hidden />
+                  <div className={local.Fallback} role="alert">
+                    <BrokenImageIcon className={local.Icon} />
+                    <p className={local.Title}>Couldn’t load this photo</p>
+                    <p className={local.Text}>
+                      {photo.alt}.{" "}
+                      {attempts[photo.id]
+                        ? `Tried ${attempts[photo.id] + 1} times.`
+                        : "Check your connection and try again."}
+                    </p>
+                    <div className={local.Actions}>
+                      <button
+                        type="button"
+                        className={local.Button}
+                        onClick={() => retry(photo.id)}
+                      >
+                        Retry
+                      </button>
+                      <a
+                        href={photo.src}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={local.Link}
+                      >
+                        Open original
+                      </a>
+                    </div>
                   </div>
-                </Lightbox.Fallback>
-              </Lightbox.Item>
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
@@ -116,7 +122,7 @@ export default function ExampleLightboxErrorsRetry() {
             <Lightbox.Description className={classes.caption}>
               {(photo: DemoPhoto) => photo.caption}
             </Lightbox.Description>
-            <Lightbox.Value className={classes.value} />
+            <Lightbox.Counter className={classes.value} />
           </div>
         </Lightbox.Popup>
       </Lightbox.Portal>

@@ -7,10 +7,11 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
+  Media: "group",
   // The failed image keeps its space but isn't drawn.
-  Image: "data-error:invisible",
+  Image: "group-data-error:invisible",
   Fallback:
-    "absolute inset-0 flex items-center justify-center text-sm text-neutral-400",
+    "absolute inset-0 hidden items-center justify-center text-sm text-neutral-400 group-data-error:flex",
 };
 
 /** The second photo fails to load in the viewer; its thumbnail still works. */
@@ -44,19 +45,23 @@ export default function ExampleLightboxErrorsMinimal() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={classes.item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
+              <Lightbox.Slide className={classes.item}>
+                <Lightbox.Media
                   width={photo.width}
                   height={photo.height}
-                  className={local.Image}
-                />
-                {/* Renders only when the image fails. */}
-                <Lightbox.Fallback className={local.Fallback}>
-                  This image couldn’t be loaded.
-                </Lightbox.Fallback>
-              </Lightbox.Item>
+                  className={local.Media}
+                >
+                  <img
+                    src={photo.src}
+                    alt={photo.alt}
+                    className={local.Image}
+                  />
+                  {/* Shown only when the image fails, with `data-error`. */}
+                  <p className={local.Fallback}>
+                    This image couldn’t be loaded.
+                  </p>
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>

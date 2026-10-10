@@ -19,14 +19,11 @@ export function DemoViewer(props: { toolbar?: React.ReactNode }) {
         <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
         <Lightbox.Viewport className={classes.viewport}>
           {(photo: Photo) => (
-            <Lightbox.Item className={classes.item}>
-              <Lightbox.Image
-                src={photo.src}
-                alt={photo.alt}
-                width={photo.width}
-                height={photo.height}
-              />
-            </Lightbox.Item>
+            <Lightbox.Slide className={classes.item}>
+              <Lightbox.Media width={photo.width} height={photo.height}>
+                <img src={photo.src} alt={photo.alt} />
+              </Lightbox.Media>
+            </Lightbox.Slide>
           )}
         </Lightbox.Viewport>
         <Lightbox.Close className={`${classes.close} ${classes.control}`}>
@@ -44,7 +41,7 @@ export function DemoViewer(props: { toolbar?: React.ReactNode }) {
               >
                 <ChevronIcon direction="left" />
               </Lightbox.Previous>
-              <Lightbox.Value className={classes.value} />
+              <Lightbox.Counter className={classes.value} />
               <Lightbox.Next
                 render={<Toolbar.Button />}
                 className={classes.toolbarButton}

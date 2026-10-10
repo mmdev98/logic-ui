@@ -21,7 +21,7 @@ const local = {
   Fade: "data-[orientation=horizontal]:data-overflow-start:mask-l-from-85% data-[orientation=horizontal]:data-overflow-end:mask-r-from-85% data-[orientation=vertical]:data-overflow-start:mask-t-from-85% data-[orientation=vertical]:data-overflow-end:mask-b-from-85%",
 };
 
-export default function ExampleLightboxThumbnailsResponsive() {
+export default function ExampleLightboxThumbnailListResponsive() {
   // The orientation sets the arrow keys, so it follows the layout.
   const wide = useMediaQuery("(min-width: 48rem)", {});
   const orientation = wide ? "vertical" : "horizontal";
@@ -35,21 +35,18 @@ export default function ExampleLightboxThumbnailsResponsive() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={local.Viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={local.Item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={local.Item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
             <CloseIcon />
           </Lightbox.Close>
           {/* Styled through `data-orientation`, so one class list fits both layouts. */}
-          <Lightbox.Thumbnails
+          <Lightbox.ThumbnailList
             orientation={orientation}
             className={`${local.Strip} ${local.Fade} ${classes.hideScrollbar} ${classes.control}`}
           >
@@ -65,7 +62,7 @@ export default function ExampleLightboxThumbnailsResponsive() {
                 />
               </Lightbox.Thumbnail>
             )}
-          </Lightbox.Thumbnails>
+          </Lightbox.ThumbnailList>
         </Lightbox.Popup>
       </Lightbox.Portal>
     </Lightbox.Root>

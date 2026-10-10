@@ -26,7 +26,7 @@ const local = {
     "absolute top-[calc(0.75rem+env(safe-area-inset-top))] left-[calc(0.75rem+env(safe-area-inset-left))] flex size-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-inherit",
 };
 
-export default function ExampleLightboxThumbnailsSidebar() {
+export default function ExampleLightboxThumbnailListSidebar() {
   return (
     <Lightbox.Root items={photos}>
       <DemoTriggers items={photos.slice(0, 4)} />
@@ -36,14 +36,11 @@ export default function ExampleLightboxThumbnailsSidebar() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={local.Viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={local.Item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={local.Item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${local.Close} ${classes.control}`}>
@@ -52,11 +49,11 @@ export default function ExampleLightboxThumbnailsSidebar() {
           {/* A list with titles, like a playlist. The thumbnail's text names it. */}
           <aside className={`${local.Sidebar} ${classes.control}`}>
             <h3 className={local.Heading}>
-              <Lightbox.Value>
+              <Lightbox.Counter>
                 {(state) => `Photo ${state.index + 1} of ${state.count}`}
-              </Lightbox.Value>
+              </Lightbox.Counter>
             </h3>
-            <Lightbox.Thumbnails
+            <Lightbox.ThumbnailList
               orientation="vertical"
               aria-label="All photos"
               className={`${local.List} ${classes.hideScrollbar} ${classes.fadeY}`}
@@ -79,7 +76,7 @@ export default function ExampleLightboxThumbnailsSidebar() {
                   </span>
                 </Lightbox.Thumbnail>
               )}
-            </Lightbox.Thumbnails>
+            </Lightbox.ThumbnailList>
           </aside>
         </Lightbox.Popup>
       </Lightbox.Portal>

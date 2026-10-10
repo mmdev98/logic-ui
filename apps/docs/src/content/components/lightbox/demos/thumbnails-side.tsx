@@ -18,7 +18,7 @@ const local = {
   Image: "size-full object-cover",
 };
 
-export default function ExampleLightboxThumbnailsSide() {
+export default function ExampleLightboxThumbnailListSide() {
   return (
     <Lightbox.Root items={photos}>
       <DemoTriggers items={photos.slice(0, 4)} />
@@ -28,21 +28,18 @@ export default function ExampleLightboxThumbnailsSide() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={local.Viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={local.Item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={local.Item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
             <CloseIcon />
           </Lightbox.Close>
           {/* ↑ ↓ move between the thumbnails of a vertical strip. */}
-          <Lightbox.Thumbnails
+          <Lightbox.ThumbnailList
             orientation="vertical"
             className={`${local.Strip} ${classes.hideScrollbar} ${classes.fadeY} ${classes.control}`}
           >
@@ -58,7 +55,7 @@ export default function ExampleLightboxThumbnailsSide() {
                 />
               </Lightbox.Thumbnail>
             )}
-          </Lightbox.Thumbnails>
+          </Lightbox.ThumbnailList>
         </Lightbox.Popup>
       </Lightbox.Portal>
     </Lightbox.Root>

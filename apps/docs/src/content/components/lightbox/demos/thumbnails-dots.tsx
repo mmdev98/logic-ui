@@ -15,7 +15,7 @@ const local = {
 
 const items = photos.slice(0, 6);
 
-export default function ExampleLightboxThumbnailsDots() {
+export default function ExampleLightboxThumbnailListDots() {
   return (
     <Lightbox.Root items={items}>
       <DemoTriggers items={items.slice(0, 4)} />
@@ -25,27 +25,26 @@ export default function ExampleLightboxThumbnailsDots() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={classes.item}>
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                />
-              </Lightbox.Item>
+              <Lightbox.Slide className={classes.item}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>
             <CloseIcon />
           </Lightbox.Close>
           {/* Thumbnails don't need an image: here each one is a dot. */}
-          <Lightbox.Thumbnails className={`${local.Dots} ${classes.control}`}>
+          <Lightbox.ThumbnailList
+            className={`${local.Dots} ${classes.control}`}
+          >
             {() => (
               <Lightbox.Thumbnail className={local.Dot}>
                 <span className={local.Mark} />
               </Lightbox.Thumbnail>
             )}
-          </Lightbox.Thumbnails>
+          </Lightbox.ThumbnailList>
         </Lightbox.Popup>
       </Lightbox.Portal>
     </Lightbox.Root>

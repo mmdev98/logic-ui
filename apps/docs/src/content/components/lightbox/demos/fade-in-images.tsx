@@ -7,7 +7,7 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Image:
+  Media:
     "transition-[opacity,filter] duration-400 data-loading:opacity-0 data-loading:blur-md",
 };
 
@@ -35,14 +35,12 @@ export default function ExampleLightboxFadeInImages() {
           <Lightbox.Title className="sr-only">Photos</Lightbox.Title>
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: Photo) => (
-              <Lightbox.Item className={classes.item}>
+              <Lightbox.Slide className={classes.item}>
                 {/* No `width` or `height`: the size is only known once the image loads. */}
-                <Lightbox.Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  className={local.Image}
-                />
-              </Lightbox.Item>
+                <Lightbox.Media className={local.Media}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Close className={`${classes.close} ${classes.control}`}>

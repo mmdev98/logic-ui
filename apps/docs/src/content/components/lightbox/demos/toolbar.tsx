@@ -33,7 +33,7 @@ export default function ExampleLightboxToolbar() {
             >
               <ChevronIcon direction="left" />
             </Lightbox.Previous>
-            <Lightbox.Value className={classes.value} />
+            <Lightbox.Counter className={classes.value} />
             <Lightbox.Next
               render={<Toolbar.Button />}
               className={classes.toolbarButton}
