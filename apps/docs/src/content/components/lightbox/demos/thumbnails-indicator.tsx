@@ -7,9 +7,9 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  // Positioned, so the indicator's CSS variables are measured from it.
   Bar: "absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-black/50 p-1.5",
-  Dots: "flex gap-1",
+  // Positioned, so the indicator is placed in it.
+  Dots: "relative flex gap-1",
   // The button is larger than the dot, so it stays easy to tap.
   Dot: "flex size-6 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-white",
   Mark: "size-2 rounded-full bg-white/50",
@@ -50,8 +50,8 @@ export default function ExampleLightboxThumbnailsIndicator() {
                   <span className={local.Mark} />
                 </Lightbox.Thumbnail>
               )}
+              <Lightbox.ThumbnailIndicator className={local.Indicator} />
             </Lightbox.ThumbnailList>
-            <Lightbox.ThumbnailIndicator className={local.Indicator} />
           </div>
         </Lightbox.Popup>
       </Lightbox.Portal>

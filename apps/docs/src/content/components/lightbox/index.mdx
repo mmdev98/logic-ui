@@ -12,10 +12,8 @@
 Import the component and assemble its parts:
 
 ```jsx title="Anatomy"
-<Lightbox.Root items={photos}>
-  {photos.map((photo) => (
-    <Lightbox.Trigger key={photo.id} value={photo.id} />
-  ))}
+<Lightbox.Root>
+  <Lightbox.Trigger />
 
   <Lightbox.Portal>
     <Lightbox.Backdrop />
@@ -24,14 +22,10 @@ Import the component and assemble its parts:
       <Lightbox.Description />
 
       <Lightbox.Viewport>
-        {(photo) => (
-          <Lightbox.Slide>
-            <Lightbox.Media>
-              <img src={photo.src} alt={photo.alt} />
-            </Lightbox.Media>
-            <Lightbox.Caption>{photo.caption}</Lightbox.Caption>
-          </Lightbox.Slide>
-        )}
+        <Lightbox.Slide>
+          <Lightbox.Media />
+          <Lightbox.Caption />
+        </Lightbox.Slide>
       </Lightbox.Viewport>
 
       <Lightbox.Previous />
@@ -45,13 +39,9 @@ Import the component and assemble its parts:
       <Lightbox.Close />
 
       <Lightbox.ThumbnailList>
-        {(photo) => (
-          <Lightbox.Thumbnail>
-            <img src={photo.thumb} alt="" />
-          </Lightbox.Thumbnail>
-        )}
+        <Lightbox.Thumbnail />
+        <Lightbox.ThumbnailIndicator />
       </Lightbox.ThumbnailList>
-      <Lightbox.ThumbnailIndicator />
     </Lightbox.Popup>
   </Lightbox.Portal>
 </Lightbox.Root>
@@ -374,15 +364,13 @@ Thumbnails don't need an image. Here each one is a dot, and the active one stret
 
 #### Sliding indicator
 
-`Lightbox.ThumbnailIndicator` marks the active thumbnail with one element that glides from thumbnail to thumbnail, like Base UI's `Tabs.Indicator`. Place it next to `Lightbox.ThumbnailList` in the same positioned box: it gets the active thumbnail's box as `--active-thumbnail-left`, `--active-thumbnail-top`, `--active-thumbnail-width` and `--active-thumbnail-height`, following the list as it scrolls.
+`Lightbox.ThumbnailIndicator` marks the active thumbnail with one element that glides from thumbnail to thumbnail, like Base UI's `Tabs.Indicator`. Place it in `Lightbox.ThumbnailList`, after the function child, and make the list `relative`: it gets the active thumbnail's box in the list as `--active-thumbnail-left`, `--active-thumbnail-top`, `--active-thumbnail-width` and `--active-thumbnail-height`, and scrolls with the list.
 
 ```tsx title="Sliding indicator"
-<div className="relative">
-  <Lightbox.ThumbnailList>
-    {(photo) => <Lightbox.Thumbnail />}
-  </Lightbox.ThumbnailList>
+<Lightbox.ThumbnailList className="relative">
+  {(photo) => <Lightbox.Thumbnail />}
   <Lightbox.ThumbnailIndicator className="absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width) transition-[left,top]" />
-</div>
+</Lightbox.ThumbnailList>
 ```
 
 <Demo src="./demos/thumbnails-indicator.tsx" />
