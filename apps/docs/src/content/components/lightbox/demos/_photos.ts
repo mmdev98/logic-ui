@@ -87,3 +87,40 @@ export function getThumbnailSrc(photo: Photo) {
 
 /** An image that always fails to load, at once and without a request. */
 export const BROKEN_SRC = "data:image/png;base64,broken";
+
+/** A photo or a video of the demos that mix both. */
+export type MediaItem = Photo & { type: "image" | "video" };
+
+/** Short public videos: a CC0 clip from MDN's examples, and Blender's open movie. */
+export const videos: MediaItem[] = [
+  {
+    id: "flower",
+    type: "video",
+    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    alt: "A flower opening",
+    caption: "Blooming",
+  },
+  {
+    id: "bunny",
+    type: "video",
+    src: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
+    width: 1280,
+    height: 720,
+    alt: "Big Buck Bunny, © Blender Foundation, CC BY 3.0",
+    caption: "Big Buck Bunny",
+  },
+];
+
+/** Reads a video's size from its metadata, so it flies in with the right shape. */
+export function loadVideoSize(
+  src: string,
+): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () =>
+      resolve({ width: video.videoWidth, height: video.videoHeight });
+    video.onerror = () => resolve(null);
+    video.src = src;
+  });
+}

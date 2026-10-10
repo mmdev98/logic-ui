@@ -2,49 +2,87 @@
 import * as React from "react";
 import { Lightbox } from "@logic-ui/react/lightbox";
 import { Toolbar } from "@logic-ui/react/toolbar";
-import { photos } from "./_photos";
-import { DemoViewer } from "./_viewer";
+import { photos, type Photo } from "./_photos";
+import { CloseIcon, ResetIcon, ZoomInIcon, ZoomOutIcon } from "./_icons";
 import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Avatar:
-    "size-24 cursor-zoom-in overflow-hidden rounded-full border-2 border-white p-0 shadow-[0_0_0_1px] shadow-neutral-200 data-flying:invisible data-popup-open:invisible dark:border-neutral-950 dark:shadow-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 dark:focus-visible:outline-white",
+  Profile: "flex items-center gap-3",
+  // The image grows out of the circle: the flight takes the trigger's radius.
+  Avatar: "size-14 rounded-full",
+  Name: "m-0 text-sm font-semibold text-white",
+  Role: "m-0 text-sm text-neutral-400",
+  Heading: "m-0 text-sm font-medium",
 };
 
-const avatar = [photos[1]];
+const portrait = { ...photos[1], caption: "Maya Lindqvist" };
+const items = [portrait];
 
 export default function ExampleLightboxSingleImage() {
   return (
-    <Lightbox.Root items={avatar}>
-      <Lightbox.Trigger value={avatar[0].id} className={local.Avatar}>
-        <img src={avatar[0].src} alt="" className={classes.thumbnailImage} />
-      </Lightbox.Trigger>
-      <DemoViewer
-        toolbar={
-          <Toolbar.Root className={classes.toolbar}>
-            <Lightbox.ZoomOut
-              render={<Toolbar.Button />}
-              className={classes.toolbarButton}
-            >
-              −
-            </Lightbox.ZoomOut>
-            <Lightbox.ZoomValue className={classes.value} />
-            <Lightbox.ZoomIn
-              render={<Toolbar.Button />}
-              className={classes.toolbarButton}
-            >
-              +
-            </Lightbox.ZoomIn>
-            <Lightbox.ZoomReset
-              render={<Toolbar.Button />}
-              className={classes.toolbarButton}
-            >
-              ↺
-            </Lightbox.ZoomReset>
-          </Toolbar.Root>
-        }
-      />
+    <Lightbox.Root items={items}>
+      <div className={local.Profile}>
+        <Lightbox.Trigger
+          value={portrait.id}
+          aria-label="View Maya's photo"
+          className={`${classes.trigger} ${local.Avatar}`}
+        >
+          <img src={portrait.src} alt="" className={classes.triggerImage} />
+        </Lightbox.Trigger>
+        <div>
+          <p className={local.Name}>Maya Lindqvist</p>
+          <p className={local.Role}>Photographer</p>
+        </div>
+      </div>
+
+      <Lightbox.Portal>
+        <Lightbox.Backdrop className={classes.backdrop} />
+        <Lightbox.Popup className={classes.popup}>
+          <Lightbox.Viewport className={classes.viewport}>
+            {(photo: Photo) => (
+              <Lightbox.Slide className={classes.slide}>
+                <Lightbox.Media width={photo.width} height={photo.height}>
+                  <img src={photo.src} alt={photo.alt} />
+                </Lightbox.Media>
+              </Lightbox.Slide>
+            )}
+          </Lightbox.Viewport>
+          <header className={`${classes.topBar} ${classes.controlTop}`}>
+            <Lightbox.Title className={local.Heading}>
+              {(photo: Photo) => photo.caption}
+            </Lightbox.Title>
+            <Lightbox.Close className={classes.iconButton}>
+              <CloseIcon />
+            </Lightbox.Close>
+          </header>
+          {/* One photo: only the zoom. */}
+          <footer className={`${classes.bottomBar} ${classes.controlBottom}`}>
+            <Toolbar.Root className={classes.toolbar}>
+              <Lightbox.ZoomOut
+                render={<Toolbar.Button />}
+                className={classes.toolbarButton}
+              >
+                <ZoomOutIcon />
+              </Lightbox.ZoomOut>
+              <Lightbox.ZoomValue className={classes.toolbarValue} />
+              <Lightbox.ZoomIn
+                render={<Toolbar.Button />}
+                className={classes.toolbarButton}
+              >
+                <ZoomInIcon />
+              </Lightbox.ZoomIn>
+              <Toolbar.Separator className={classes.separator} />
+              <Lightbox.ZoomReset
+                render={<Toolbar.Button />}
+                className={classes.toolbarButton}
+              >
+                <ResetIcon />
+              </Lightbox.ZoomReset>
+            </Toolbar.Root>
+          </footer>
+        </Lightbox.Popup>
+      </Lightbox.Portal>
     </Lightbox.Root>
   );
 }
