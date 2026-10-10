@@ -30,7 +30,7 @@ const local = {
   Dot: "flex size-5 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-white",
   Mark: "size-1.5 rounded-full bg-white/40",
   // Spans the active dot's button; its bright dot is drawn in the middle.
-  Ring: "pointer-events-none absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width) transition-[left] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] after:absolute after:inset-0 after:m-auto after:size-2 after:rounded-full after:bg-white after:content-[''] motion-reduce:transition-none",
+  Ring: "pointer-events-none absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width) transition-[left] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] after:absolute after:inset-0 after:m-auto after:size-2 after:rounded-full after:bg-white after:content-[''] in-data-dragging:transition-none motion-reduce:transition-none",
   Caption: `m-0 max-w-sm text-center text-sm text-white drop-shadow-[0_1px_3px_rgb(0_0_0/0.8)] ${classes.enter}`,
 };
 

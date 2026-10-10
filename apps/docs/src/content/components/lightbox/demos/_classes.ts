@@ -74,9 +74,10 @@ export const classes = {
     "data-overflow-start:mask-l-from-85% data-overflow-end:mask-r-from-85%",
   fadeY:
     "data-overflow-start:mask-t-from-85% data-overflow-end:mask-b-from-85%",
-  // A ring that glides to the active thumbnail.
+  // A ring that glides to the active thumbnail. It follows the finger during
+  // a swipe, and after a flick it settles as fast as the slides do.
   indicator:
-    "pointer-events-none absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width) outline-2 outline-offset-2 outline-white transition-[left,top,width,height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+    "pointer-events-none absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width) outline-2 outline-offset-2 outline-white transition-[left,top,width,height] duration-[calc(300ms*var(--lightbox-swipe-strength,1))] ease-[cubic-bezier(0.32,0.72,0,1)] in-data-dragging:transition-none motion-reduce:transition-none",
 
   // Loading and errors, inside `Lightbox.Media`.
   spinner:
