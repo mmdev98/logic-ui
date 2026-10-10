@@ -9,25 +9,30 @@ import {
   type TestItem,
 } from "../test-utils";
 
+const LIST_LEFT = 100;
 const THUMBNAIL_WIDTH = 60;
 const GAP = 8;
 
 /**
- * jsdom has no layout: thumbnails sit in a row at the top of the page, and
- * every element's positioned box is the page.
+ * jsdom has no layout: the list starts 100 px from the page's left, and its
+ * thumbnails sit in a row in it.
  */
 beforeEach(() => {
-  vi.spyOn(HTMLElement.prototype, "offsetParent", "get").mockReturnValue(
-    document.body,
-  );
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
+      if (this.getAttribute("role") === "tablist") {
+        return DOMRect.fromRect({ x: LIST_LEFT, y: 0, width: 300, height: 40 });
+      }
       const index = ITEMS.findIndex(
         (item) => this.dataset.testid === `thumbnail-${item.id}`,
       );
-      const left = index === -1 ? 0 : index * (THUMBNAIL_WIDTH + GAP);
-      const width = index === -1 ? 0 : THUMBNAIL_WIDTH;
-      return DOMRect.fromRect({ x: left, y: 0, width, height: 40 });
+      if (index === -1) return DOMRect.fromRect();
+      return DOMRect.fromRect({
+        x: LIST_LEFT + index * (THUMBNAIL_WIDTH + GAP),
+        y: 0,
+        width: THUMBNAIL_WIDTH,
+        height: 40,
+      });
     },
   );
 });
@@ -40,26 +45,25 @@ function renderWithIndicator(): void {
   render(
     <TestLightbox
       popupChildren={
-        <div>
-          <Lightbox.ThumbnailList>
-            {(item: TestItem) => (
-              <Lightbox.Thumbnail data-testid={`thumbnail-${item.id}`} />
-            )}
-          </Lightbox.ThumbnailList>
+        <Lightbox.ThumbnailList>
+          {(item: TestItem) => (
+            <Lightbox.Thumbnail data-testid={`thumbnail-${item.id}`} />
+          )}
           <Lightbox.ThumbnailIndicator data-testid="indicator" />
-        </div>
+        </Lightbox.ThumbnailList>
       }
     />,
   );
 }
 
 describe("Lightbox.ThumbnailIndicator", () => {
-  it("gets the active thumbnail's box, hidden from screen readers", async () => {
+  it("gets the active thumbnail's box in the list, hidden from screen readers", async () => {
     renderWithIndicator();
     await openLightboxAt("Open image 2 of 3");
     const indicator = screen.getByTestId("indicator");
 
     expect(indicator.tagName).toBe("SPAN");
+    expect(indicator.parentElement?.getAttribute("role")).toBe("tablist");
     expect(indicator.getAttribute("aria-hidden")).toBe("true");
     expect(indicator.style.getPropertyValue("--active-thumbnail-left")).toBe(
       `${THUMBNAIL_WIDTH + GAP}px`,
@@ -85,14 +89,32 @@ describe("Lightbox.ThumbnailIndicator", () => {
     expect(indicator.getAttribute("data-activation-direction")).toBe("right");
   });
 
-  it("renders nothing without thumbnails to measure", async () => {
-    render(
-      <TestLightbox
-        popupChildren={<Lightbox.ThumbnailIndicator data-testid="indicator" />}
-      />,
-    );
+  it("measures in the list's content, so it scrolls with the list", async () => {
+    renderWithIndicator();
     await openLightboxAt("Open image 1 of 3");
+    const strip = screen.getByRole("tablist", { name: "Thumbnails" });
+    strip.scrollLeft = 50;
 
-    expect(screen.queryByTestId("indicator")).toBeNull();
+    await clickButton("Next image");
+
+    expect(
+      screen
+        .getByTestId("indicator")
+        .style.getPropertyValue("--active-thumbnail-left"),
+    ).toBe(`${THUMBNAIL_WIDTH + GAP + 50}px`);
+  });
+
+  it("throws outside Lightbox.ThumbnailList", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    expect(() =>
+      render(
+        <Lightbox.Root items={ITEMS}>
+          <Lightbox.ThumbnailIndicator />
+        </Lightbox.Root>,
+      ),
+    ).toThrow("Base UI: LightboxThumbnailListContext is missing.");
+    consoleError.mockRestore();
   });
 });

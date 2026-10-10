@@ -61,6 +61,20 @@ describe("Lightbox.ThumbnailList", () => {
     expect(screen.getByRole("tab", { name: "Show image 3 of 3" })).toBeTruthy();
   });
 
+  it("throws without a function child", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    expect(() =>
+      render(
+        <Lightbox.Root items={[]}>
+          <Lightbox.ThumbnailList>{[]}</Lightbox.ThumbnailList>
+        </Lightbox.Root>,
+      ),
+    ).toThrow("Base UI: Lightbox.ThumbnailList has no function child.");
+    consoleError.mockRestore();
+  });
+
   it("makes the slides its tab panels", async () => {
     renderWithThumbnails();
     await openLightboxAt("Open image 1 of 3");

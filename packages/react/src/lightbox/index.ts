@@ -102,6 +102,7 @@ export {
   LightboxThumbnailList,
   type LightboxThumbnailListProps,
   type LightboxThumbnailListState,
+  type LightboxThumbnailRender,
 } from "./thumbnail-list/lightbox-thumbnail-list";
 export {
   LightboxTitle,

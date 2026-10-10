@@ -26,17 +26,27 @@ export type LightboxThumbnailListState = {
   dragging: boolean;
 };
 
+/** Renders one thumbnail for an item, as passed to `items`. */
+export type LightboxThumbnailRender = (
+  // The items can have any shape, like Base UI's `Combobox.List` children.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  item: any,
+  index: number,
+) => React.ReactNode;
+
 export interface LightboxThumbnailListProps extends Omit<
   useRender.ComponentProps<"div", LightboxThumbnailListState>,
   "children"
 > {
   /**
-   * Renders one thumbnail: a `Lightbox.Thumbnail` with an image inside.
-   * Receives the item as passed to `items`. Called for every item.
+   * A function that renders one thumbnail: a `Lightbox.Thumbnail` with an
+   * image inside. Receives the item as passed to `items`, and is called for
+   * every item. Other children, such as a `Lightbox.ThumbnailIndicator`,
+   * render after the thumbnails.
    */
-  // The items can have any shape, like Base UI's `Combobox.List` children.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  children: (item: any, index: number) => React.ReactNode;
+  children:
+    | LightboxThumbnailRender
+    | ReadonlyArray<LightboxThumbnailRender | React.ReactNode>;
   /**
    * Which arrow keys move between thumbnails, ← → or ↑ ↓, and which way the
    * strip scrolls.
@@ -75,6 +85,20 @@ export function LightboxThumbnailList(
 
   const { items, values, index, goTo, registerThumbnailList } =
     useLightboxRootContext();
+  const childList = Array.isArray(children) ? children : [children];
+  const renderThumbnail = childList.find(
+    (child): child is LightboxThumbnailRender => typeof child === "function",
+  );
+  if (!renderThumbnail) {
+    throw new Error(
+      "Base UI: Lightbox.ThumbnailList has no function child. " +
+        "It renders one thumbnail per item from a function. " +
+        "Pass one: {(photo) => <Lightbox.Thumbnail />}.",
+    );
+  }
+  const otherChildren = childList.filter(
+    (child) => typeof child !== "function",
+  ) as React.ReactNode[];
   const [focusIndex, setFocusIndex] = React.useState(index);
   const [shownIndex, setShownIndex] = React.useState(index);
   const thumbnailsRef = React.useRef(new Map<number, HTMLElement>());
@@ -103,12 +127,11 @@ export function LightboxThumbnailList(
   );
   const mergedRef = useMergedRefs(ref, scroll.ref, handleListElement);
 
-  // The slides become its tab panels, and `Lightbox.ThumbnailIndicator`
-  // measures its thumbnails.
+  // The slides become its tab panels.
   useIsoLayoutEffect(() => {
     if (!listElement) return undefined;
-    return registerThumbnailList({ element: listElement, getThumbnail });
-  }, [listElement, getThumbnail, registerThumbnailList]);
+    return registerThumbnailList({ element: listElement });
+  }, [listElement, registerThumbnailList]);
 
   const registerThumbnail = useStableCallback(
     (thumbnailIndex: number, element: HTMLElement) => {
@@ -153,8 +176,14 @@ export function LightboxThumbnailList(
   );
 
   const contextValue: LightboxThumbnailListContextValue = React.useMemo(
-    () => ({ focusIndex, setFocusIndex, registerThumbnail }),
-    [focusIndex, registerThumbnail],
+    () => ({
+      focusIndex,
+      setFocusIndex,
+      registerThumbnail,
+      element: listElement,
+      getThumbnail,
+    }),
+    [focusIndex, registerThumbnail, listElement, getThumbnail],
   );
 
   const state: LightboxThumbnailListState = React.useMemo(
@@ -183,14 +212,19 @@ export function LightboxThumbnailList(
         "aria-orientation": orientation,
         "aria-label": "Thumbnails",
         onKeyDown: handleKeyDown,
-        children: items.map((item, itemIndex) => (
-          <LightboxThumbnailListItemContext
-            key={values[itemIndex]}
-            value={{ index: itemIndex }}
-          >
-            {children(item, itemIndex)}
-          </LightboxThumbnailListItemContext>
-        )),
+        children: (
+          <React.Fragment>
+            {items.map((item, itemIndex) => (
+              <LightboxThumbnailListItemContext
+                key={values[itemIndex]}
+                value={{ index: itemIndex }}
+              >
+                {renderThumbnail(item, itemIndex)}
+              </LightboxThumbnailListItemContext>
+            ))}
+            {otherChildren}
+          </React.Fragment>
+        ),
       },
       elementProps,
     ),

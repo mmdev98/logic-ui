@@ -147,17 +147,18 @@ export function toLightboxRect(element: Element): LightboxRect {
 }
 
 /**
- * `rect` relative to `container`, both from `getBoundingClientRect`, in the
- * coordinates of an absolutely positioned child: inside its `border`.
+ * `rect` relative to `container`, both from `getBoundingClientRect`, moved
+ * by `offset`: the container's border minus its scroll, for the coordinates
+ * of an absolutely positioned child that scrolls with its content.
  */
 export function getLightboxRelativeRect(
   rect: LightboxRect,
   container: LightboxRect,
-  border: { left: number; top: number } = { left: 0, top: 0 },
+  offset: { left: number; top: number } = { left: 0, top: 0 },
 ): LightboxRect {
   return {
-    left: rect.left - container.left - border.left,
-    top: rect.top - container.top - border.top,
+    left: rect.left - container.left - offset.left,
+    top: rect.top - container.top - offset.top,
     width: rect.width,
     height: rect.height,
   };

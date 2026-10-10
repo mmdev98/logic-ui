@@ -1,12 +1,12 @@
 /**
- * Distance from the left of the indicator's positioned box to the active
+ * Distance from the left of the thumbnail list's content to the active
  * thumbnail.
  * @type {number}
  */
 export const activeThumbnailLeft = "--active-thumbnail-left";
 
 /**
- * Distance from the top of the indicator's positioned box to the active
+ * Distance from the top of the thumbnail list's content to the active
  * thumbnail.
  * @type {number}
  */

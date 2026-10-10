@@ -8,6 +8,9 @@ export interface LightboxThumbnailListContextValue {
   setFocusIndex: (index: number) => void;
   /** Registers a thumbnail for the arrow keys. Returns the unregister function. */
   registerThumbnail: (index: number, element: HTMLElement) => () => void;
+  /** The list's element, which `Lightbox.ThumbnailIndicator` measures in. */
+  element: HTMLElement | null;
+  getThumbnail: (index: number) => HTMLElement | undefined;
 }
 
 /** The item a `Lightbox.ThumbnailList` child renders, so `Lightbox.Thumbnail` needs no props. */
@@ -26,7 +29,7 @@ export function useLightboxThumbnailListContext(): LightboxThumbnailListContextV
   if (!context) {
     throw new Error(
       "Base UI: LightboxThumbnailListContext is missing. " +
-        "Lightbox.Thumbnail must be placed within <Lightbox.ThumbnailList>.",
+        "Lightbox.Thumbnail and Lightbox.ThumbnailIndicator must be placed within <Lightbox.ThumbnailList>.",
     );
   }
   return context;

@@ -92,7 +92,7 @@ describe("rubberbandLightboxOverflow", () => {
 });
 
 describe("getLightboxRelativeRect", () => {
-  it("places a rect inside its container's border", () => {
+  it("places a rect in its container, moved by an offset", () => {
     expect(
       getLightboxRelativeRect(
         { left: 120, top: 80, width: 60, height: 40 },

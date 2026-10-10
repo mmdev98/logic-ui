@@ -32,11 +32,10 @@ export type LightboxMediaEntry = {
 
 /**
  * A `Lightbox.ThumbnailList` registered with the root, so the slides know
- * they are tab panels and `Lightbox.ThumbnailIndicator` can measure it.
+ * they are its tab panels.
  */
 export type LightboxThumbnailListEntry = {
   element: HTMLElement;
-  getThumbnail: (index: number) => HTMLElement | undefined;
 };
 
 export interface LightboxRootContextValue {

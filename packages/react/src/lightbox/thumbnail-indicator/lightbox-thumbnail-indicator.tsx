@@ -3,11 +3,11 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
-import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import * as React from "react";
 import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
+import { useLightboxThumbnailListContext } from "../thumbnail-list/lightbox-thumbnail-list-context";
 import type { LightboxActivationDirection, LightboxRect } from "../types";
 import { getLightboxRelativeRect } from "../utils/lightbox-geometry";
 import {
@@ -39,12 +39,12 @@ function isSameRect(a: LightboxRect | null, b: LightboxRect): boolean {
 
 /**
  * Marks the active thumbnail with one element that moves from thumbnail to
- * thumbnail, like Base UI's `Tabs.Indicator`. Place it next to
- * `Lightbox.ThumbnailList`, in the same positioned box: it gets the active
- * thumbnail's box as CSS variables, relative to that box and following the
- * list as it scrolls. Style it with them and a transition:
- * `left: var(--active-thumbnail-left)`. Hidden from screen readers; renders
- * nothing until it has measured a thumbnail.
+ * thumbnail, like Base UI's `Tabs.Indicator`. Place it in
+ * `Lightbox.ThumbnailList`, after the function child, and make the list
+ * `position: relative`: it gets the active thumbnail's box in the list as
+ * CSS variables, and scrolls with the list. Style it with them and a
+ * transition: `left: var(--active-thumbnail-left)`. Hidden from screen
+ * readers; renders nothing until it has measured a thumbnail.
  * Renders a `<span>` element.
  */
 export function LightboxThumbnailIndicator(
@@ -52,49 +52,36 @@ export function LightboxThumbnailIndicator(
 ): React.ReactElement | null {
   const { render, ref, style, ...elementProps } = props;
 
-  const { index, activationDirection, thumbnailList } =
-    useLightboxRootContext();
+  const { index, activationDirection } = useLightboxRootContext();
+  const { element: list, getThumbnail } = useLightboxThumbnailListContext();
   const [rect, setRect] = React.useState<LightboxRect | null>(null);
-  const elementRef = React.useRef<HTMLElement | null>(null);
-  const mergedRef = useMergedRefs(ref, elementRef);
 
   const measure = useStableCallback(() => {
-    const thumbnail = thumbnailList?.getThumbnail(index);
-    const element = elementRef.current;
-    if (!thumbnail || !thumbnailList) {
+    const thumbnail = getThumbnail(index);
+    if (!list || !thumbnail) {
       setRect(null);
       return;
     }
-    // Before the first measure there is no element yet: measure against the
-    // list's box, which the indicator shares.
-    const container =
-      element?.offsetParent ?? thumbnailList.element.offsetParent;
-    if (!container) return;
+    // In the list's content, inside its border: the indicator scrolls with it.
     const next = getLightboxRelativeRect(
       thumbnail.getBoundingClientRect(),
-      container.getBoundingClientRect(),
-      // Positions start inside the border.
-      { left: container.clientLeft, top: container.clientTop },
+      list.getBoundingClientRect(),
+      {
+        left: list.clientLeft - list.scrollLeft,
+        top: list.clientTop - list.scrollTop,
+      },
     );
     setRect((current) => (isSameRect(current, next) ? current : next));
   });
 
-  useIsoLayoutEffect(measure, [measure, index, thumbnailList]);
+  useIsoLayoutEffect(measure, [measure, index, list]);
 
   useIsoLayoutEffect(() => {
-    if (!thumbnailList) return undefined;
-    const list = thumbnailList.element;
-    list.addEventListener("scroll", measure, { passive: true });
-    if (typeof ResizeObserver === "undefined") {
-      return () => list.removeEventListener("scroll", measure);
-    }
+    if (!list || typeof ResizeObserver === "undefined") return undefined;
     const observer = new ResizeObserver(measure);
     observer.observe(list);
-    return () => {
-      list.removeEventListener("scroll", measure);
-      observer.disconnect();
-    };
-  }, [thumbnailList, measure]);
+    return () => observer.disconnect();
+  }, [list, measure]);
 
   const state: LightboxThumbnailIndicatorState = React.useMemo(
     () => ({ activationDirection }),
@@ -113,19 +100,14 @@ export function LightboxThumbnailIndicator(
   return useRender({
     defaultTagName: "span",
     render,
-    ref: mergedRef,
+    ref,
     state,
     enabled: rect !== null,
     stateAttributesMapping: LIGHTBOX_STATE_ATTRIBUTES,
     props: mergeProps<"span">(
       { role: "presentation", "aria-hidden": true },
       elementProps,
-      {
-        style: {
-          ...style,
-          ...cssVars,
-        },
-      },
+      { style: { ...style, ...cssVars } },
     ),
   });
 }
