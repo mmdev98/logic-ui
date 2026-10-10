@@ -29,6 +29,18 @@ export const LIGHTBOX_DRAG_THRESHOLD = 8;
 export const LIGHTBOX_SWIPE_DISTANCE = 0.25;
 export const LIGHTBOX_SWIPE_VELOCITY = 0.3;
 
+/**
+ * How a released swipe's speed becomes `--lightbox-swipe-strength`, like Base
+ * UI's drawer: the time left at that speed (ms), clamped, mapped to `min`–1.
+ */
+export const LIGHTBOX_SWIPE_STRENGTH = {
+  minVelocity: 0.2,
+  maxVelocity: 4,
+  minDuration: 80,
+  maxDuration: 360,
+  min: 0.1,
+} as const;
+
 /** A vertical drag closes the viewer past this share of the height, or this speed (px/ms). */
 export const LIGHTBOX_DISMISS_DISTANCE = 0.15;
 export const LIGHTBOX_DISMISS_VELOCITY = 0.5;

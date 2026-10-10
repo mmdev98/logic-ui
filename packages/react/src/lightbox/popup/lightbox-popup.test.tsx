@@ -117,6 +117,26 @@ describe("Lightbox.Popup", () => {
   });
 });
 
+describe("Lightbox.Popup CSS variables", () => {
+  it("follows the zoom with --lightbox-zoom-scale and --lightbox-zoom-progress", async () => {
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 1 of 3");
+    const popup = screen.getByTestId("popup");
+    expect(popup.style.getPropertyValue("--lightbox-zoom-scale")).toBe("1");
+    expect(popup.style.getPropertyValue("--lightbox-zoom-progress")).toBe("0");
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "+" });
+
+    // One step of 0.5 towards the largest scale of 4.
+    await waitFor(() =>
+      expect(popup.style.getPropertyValue("--lightbox-zoom-scale")).toBe("1.5"),
+    );
+    expect(popup.style.getPropertyValue("--lightbox-zoom-progress")).toBe(
+      "0.167",
+    );
+  });
+});
+
 describe("Lightbox.Popup state", () => {
   it("exposes the side the item shown came from", async () => {
     render(<TestLightbox />);

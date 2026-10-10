@@ -113,6 +113,10 @@ export interface LightboxRootContextValue {
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
   /** Sets `data-dragging` on the popup and the backdrop, so the app can turn transitions off. */
   setDragging: (dragging: boolean) => void;
+  /** Writes how far the slides moved, in px on screen and as a share of a slide, on the popup. */
+  setSwipe: (movementX: number, progress: number) => void;
+  /** Writes the strength of a released swipe, 0.1 to 1, on the popup. */
+  setSwipeStrength: (strength: number) => void;
   /** Moves the active item by `step` after a swipe left the track `fromOffset` px away. */
   stepIndex: (step: number, fromOffset: number) => void;
   /** How the track should slide to the new index, read once by `Lightbox.Viewport`. */

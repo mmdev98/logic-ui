@@ -49,6 +49,52 @@ describe("Lightbox.Viewport", () => {
     expect(viewport.scrollLeft).toBe(0);
   });
 
+  it("writes the swipe on the popup while the slides move", async () => {
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 2 of 3");
+    const popup = screen.getByTestId("popup");
+    const viewport = screen.getByTestId("viewport");
+    expect(popup.style.getPropertyValue("--lightbox-swipe-progress")).toBe("0");
+
+    await act(async () => {
+      firePointer("pointerDown", viewport, 300, 150);
+      firePointer("pointerMove", viewport, 250, 150);
+      firePointer("pointerMove", viewport, 200, 150);
+    });
+
+    expect(popup.style.getPropertyValue("--lightbox-swipe-movement-x")).toBe(
+      "-100px",
+    );
+    expect(popup.style.getPropertyValue("--lightbox-swipe-progress")).toBe(
+      `${-100 / ITEM_WIDTH}`,
+    );
+  });
+
+  it("writes the strength of a flick, and settles faster for it", async () => {
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 1 of 3");
+    const popup = screen.getByTestId("popup");
+    const viewport = screen.getByTestId("viewport");
+
+    // A flick: the events come back to back, so the release is fast.
+    await act(async () => {
+      firePointer("pointerDown", viewport, 300, 200);
+      firePointer("pointerMove", viewport, 200, 200);
+      firePointer("pointerMove", viewport, 100, 200);
+      firePointer("pointerUp", viewport, 100, 200);
+    });
+
+    expect(
+      Number(popup.style.getPropertyValue("--lightbox-swipe-strength")),
+    ).toBeLessThan(1);
+    await wait(150);
+    expect(getTrack().style.transform).toBe(
+      `translate3d(${-ITEM_WIDTH}px, 0px, 0px)`,
+    );
+    // Back to 1 once the track has settled.
+    expect(popup.style.getPropertyValue("--lightbox-swipe-strength")).toBe("1");
+  });
+
   it("is a labelled carousel region", async () => {
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");
@@ -128,10 +174,14 @@ describe("Lightbox.Viewport", () => {
     await openLightboxAt("Open image 1 of 3");
     const viewport = screen.getByTestId("viewport");
 
+    // A slow release: the pointer rests first, so the track settles at full length.
     await act(async () => {
       firePointer("pointerDown", viewport, 300, 200);
       firePointer("pointerMove", viewport, 200, 200);
       firePointer("pointerMove", viewport, 100, 200);
+    });
+    await wait(150);
+    await act(async () => {
       firePointer("pointerUp", viewport, 100, 200);
     });
     expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
@@ -159,10 +209,14 @@ describe("Lightbox.Viewport", () => {
     const viewport = screen.getByTestId("viewport");
     const finalTransform = `translate3d(${-ITEM_WIDTH}px, 0px, 0px)`;
 
+    // A slow release: the pointer rests first, so the track settles at full length.
     await act(async () => {
       firePointer("pointerDown", viewport, 300, 200);
       firePointer("pointerMove", viewport, 200, 200);
       firePointer("pointerMove", viewport, 100, 200);
+    });
+    await wait(150);
+    await act(async () => {
       firePointer("pointerUp", viewport, 100, 200);
     });
     await wait(50);

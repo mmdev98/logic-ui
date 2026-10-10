@@ -81,8 +81,10 @@ function isInLightboxKeyboardWidget(
  * Has `data-zoomed` while the image is zoomed, `data-controls-hidden` after a
  * tap hides the controls, and `data-ending-style` while the image flies back
  * (fade the controls then, not the popup: the image is inside it). Gets
- * `--lightbox-dismiss-progress` while the image is dragged to close, and has
- * `data-dragging` during a drag: turn transitions off then.
+ * `--lightbox-dismiss-progress` while the image is dragged to close,
+ * `--lightbox-swipe-movement-x` and `--lightbox-swipe-progress` while a swipe
+ * moves the slides, and has `data-dragging` during a drag: turn transitions
+ * off then.
  * Renders a `<div>` element.
  */
 export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {

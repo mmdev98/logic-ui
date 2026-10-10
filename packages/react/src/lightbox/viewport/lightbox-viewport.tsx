@@ -88,6 +88,13 @@ export function LightboxViewport(
     const { directionSign } = metricsRef.current;
     const x = (-index * stride + offsetRef.current) * directionSign;
     track.style.transform = `translate3d(${x}px, 0px, 0px)`;
+    // The swipe, for the app's CSS and `Lightbox.ThumbnailIndicator`.
+    const movement = offsetRef.current * directionSign;
+    const progress = stride > 0 ? movement / stride : 0;
+    root.setSwipe(
+      Math.round(movement * 100) / 100,
+      Math.round(progress * 10000) / 10000,
+    );
   });
 
   const setOffset = useStableCallback((offset: number) => {
@@ -97,17 +104,27 @@ export function LightboxViewport(
     writeTrack();
   });
 
+  // How fast the track settles after a released swipe; 1 otherwise.
+  const strengthRef = React.useRef(1);
+  const setStrength = useStableCallback((strength: number) => {
+    strengthRef.current = strength;
+    root.setSwipeStrength(strength);
+  });
+
   const animateOffset = useStableCallback(
     (offset: number, onComplete?: () => void) => {
       stopOffsetRef.current?.();
       const from = offsetRef.current;
       stopOffsetRef.current = tweenLightbox(
-        LIGHTBOX_SETTLE_DURATION,
+        LIGHTBOX_SETTLE_DURATION * strengthRef.current,
         (progress) => {
           offsetRef.current = from + (offset - from) * progress;
           writeTrack();
         },
-        onComplete,
+        () => {
+          setStrength(1);
+          onComplete?.();
+        },
       );
     },
   );
@@ -192,6 +209,7 @@ export function LightboxViewport(
     getOffset: () => offsetRef.current,
     setOffset,
     animateOffset,
+    setStrength,
   });
 
   const state: LightboxViewportState = React.useMemo(

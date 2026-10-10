@@ -8,12 +8,19 @@ import {
 } from "../constants";
 import type { LightboxDismiss, LightboxZoom } from "../types";
 import {
+  clampLightboxValue,
   clampLightboxZoom,
   formatLightboxTransform,
   LIGHTBOX_IDENTITY_DISMISS,
   LIGHTBOX_IDENTITY_ZOOM,
 } from "../utils/lightbox-geometry";
 import { tweenLightbox } from "../utils/lightbox-motion";
+import {
+  dismissMovementX,
+  dismissMovementY,
+  zoomProgress,
+  zoomScale,
+} from "../popup/lightbox-popup-css-vars";
 import type { LightboxMediaEntry } from "./lightbox-root-context";
 
 export interface UseLightboxZoomOptions {
@@ -39,6 +46,8 @@ export interface UseLightboxZoomResult {
   reset: () => void;
   /** Stops the running zoom and close-drag animations where they are, writing nothing. */
   stop: () => void;
+  /** Writes the CSS variables again, to a popup or backdrop that just mounted. */
+  refresh: () => void;
 }
 
 function mix(from: number, to: number, progress: number): number {
@@ -64,6 +73,35 @@ export function useLightboxZoom(
   const targetZoomRef = React.useRef<LightboxZoom | null>(null);
   const stopDismissRef = React.useRef<(() => void) | null>(null);
 
+  // The drag to close and the zoom as CSS variables on the popup and the
+  // backdrop, so the app's styles can follow them frame by frame.
+  const writeVariables = useStableCallback(() => {
+    const { scale: zoomScaleValue } = zoomRef.current;
+    const zoomProgressValue = clampLightboxValue(
+      (zoomScaleValue - minScale) / (maxScale - minScale || 1),
+      0,
+      1,
+    );
+    for (const target of getDismissTargets()) {
+      if (!target) continue;
+      const { style } = target;
+      style.setProperty(
+        LIGHTBOX_DISMISS_PROGRESS_VARIABLE,
+        String(dismissProgressRef.current),
+      );
+      style.setProperty(dismissMovementX, `${dismissRef.current.x}px`);
+      style.setProperty(dismissMovementY, `${dismissRef.current.y}px`);
+      style.setProperty(
+        zoomScale,
+        String(Math.round(zoomScaleValue * 1000) / 1000),
+      );
+      style.setProperty(
+        zoomProgress,
+        String(Math.round(zoomProgressValue * 1000) / 1000),
+      );
+    }
+  });
+
   const write = useStableCallback(() => {
     const entry = getActiveMedia();
     if (entry?.zoomElement) {
@@ -79,12 +117,7 @@ export function useLightboxZoom(
       entry.element.style.translate = atRest ? "" : `${x}px ${y}px`;
       entry.element.style.scale = atRest ? "" : String(dismissScale);
     }
-    for (const target of getDismissTargets()) {
-      target?.style.setProperty(
-        LIGHTBOX_DISMISS_PROGRESS_VARIABLE,
-        String(dismissProgressRef.current),
-      );
-    }
+    writeVariables();
     setScale(Math.round(zoomRef.current.scale * 100) / 100);
   });
 
@@ -194,5 +227,6 @@ export function useLightboxZoom(
     animateDismiss,
     reset,
     stop,
+    refresh: writeVariables,
   };
 }

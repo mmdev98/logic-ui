@@ -20,16 +20,19 @@ import type {
 } from "../root/lightbox-root-context";
 import { LightboxPhase, type LightboxZoom } from "../types";
 import {
-  clampLightboxCounter,
+  clampLightboxValue,
   clampLightboxZoom,
   LIGHTBOX_IDENTITY_DISMISS,
   getLightboxPanBounds,
   isLightboxZoomed,
   rubberbandLightboxOverflow,
-  rubberbandLightboxCounter,
+  rubberbandLightboxValue,
   zoomLightboxAroundPoint,
 } from "../utils/lightbox-geometry";
-import { getLightboxSwipeStep } from "../utils/lightbox-motion";
+import {
+  getLightboxSwipeStep,
+  getLightboxSwipeStrength,
+} from "../utils/lightbox-motion";
 
 /** Velocity is measured over the last moves within this time (ms). */
 const VELOCITY_WINDOW = 100;
@@ -77,6 +80,8 @@ export interface UseLightboxGesturesOptions {
   /** Moves the track, in px along the reading direction. */
   setOffset: (offset: number) => void;
   animateOffset: (offset: number) => void;
+  /** Sets how fast the track settles after a release, 0.1 to 1 (`--lightbox-swipe-strength`). */
+  setStrength: (strength: number) => void;
 }
 
 export interface UseLightboxGesturesResult {
@@ -124,6 +129,7 @@ export function useLightboxGestures(
     getOffset,
     setOffset,
     animateOffset,
+    setStrength,
   } = options;
 
   const tapTimeout = useTimeout();
@@ -210,6 +216,11 @@ export function useLightboxGestures(
     });
     const canStep =
       (step === 1 && root.hasNext) || (step === -1 && root.hasPrevious);
+    // A flick settles as fast as it was thrown.
+    const remaining = canStep
+      ? getStride() - Math.abs(offset)
+      : Math.abs(offset);
+    setStrength(getLightboxSwipeStrength(remaining, velocity));
     if (canStep) root.stepIndex(step, offset);
     else animateOffset(0);
   };
@@ -282,6 +293,7 @@ export function useLightboxGestures(
         state.zoomStart = root.getZoom();
         root.setZoom(state.zoomStart);
         state.offsetStart = getOffset();
+        setStrength(1);
         setOffset(state.offsetStart);
       } else if (state.pointers.size === 2) {
         startPinch(state);
@@ -356,8 +368,8 @@ export function useLightboxGestures(
         const { scale } = state.zoomStart;
         const bounds = getLightboxPanBounds(entry.layout, scale);
         const targetX = state.zoomStart.x + deltaX;
-        const x = clampLightboxCounter(targetX, bounds.minX, bounds.maxX);
-        const y = rubberbandLightboxCounter(
+        const x = clampLightboxValue(targetX, bounds.minX, bounds.maxX);
+        const y = rubberbandLightboxValue(
           state.zoomStart.y + deltaY,
           bounds.minY,
           bounds.maxY,
@@ -474,11 +486,7 @@ export function useLightboxGestures(
       const speed = event.ctrlKey ? 0.01 : 0.002;
       const factor = Math.exp(-event.deltaY * lineHeight * speed);
       const zoom = root.getZoom();
-      const scale = clampLightboxCounter(
-        zoom.scale * factor,
-        minScale,
-        maxScale,
-      );
+      const scale = clampLightboxValue(zoom.scale * factor, minScale, maxScale);
       root.setZoom(
         clampLightboxZoom(
           zoomLightboxAroundPoint(zoom, scale, toPoint(event), entry.layout),

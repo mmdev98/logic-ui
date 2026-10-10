@@ -49,6 +49,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** A variable's value at rest: the start of the `calc()` that follows the swipe. */
+function rest(element: HTMLElement, name: string): string {
+  const value = element.style.getPropertyValue(name);
+  return /^(?:calc\()?(-?[\d.]+px)/.exec(value)?.[1] ?? value;
+}
+
 function renderWithIndicator(): void {
   render(
     <TestLightbox
@@ -73,10 +79,10 @@ describe("Lightbox.ThumbnailIndicator", () => {
     expect(indicator.tagName).toBe("SPAN");
     expect(indicator.parentElement?.getAttribute("role")).toBe("tablist");
     expect(indicator.getAttribute("aria-hidden")).toBe("true");
-    expect(indicator.style.getPropertyValue("--active-thumbnail-left")).toBe(
+    expect(rest(indicator, "--active-thumbnail-left")).toBe(
       `${THUMBNAIL_WIDTH + GAP}px`,
     );
-    expect(indicator.style.getPropertyValue("--active-thumbnail-width")).toBe(
+    expect(rest(indicator, "--active-thumbnail-width")).toBe(
       `${THUMBNAIL_WIDTH}px`,
     );
   });
@@ -85,13 +91,11 @@ describe("Lightbox.ThumbnailIndicator", () => {
     renderWithIndicator();
     await openLightboxAt("Open image 1 of 3");
     const indicator = screen.getByTestId("indicator");
-    expect(indicator.style.getPropertyValue("--active-thumbnail-left")).toBe(
-      "0px",
-    );
+    expect(rest(indicator, "--active-thumbnail-left")).toBe("0px");
 
     await clickButton("Next image");
 
-    expect(indicator.style.getPropertyValue("--active-thumbnail-left")).toBe(
+    expect(rest(indicator, "--active-thumbnail-left")).toBe(
       `${THUMBNAIL_WIDTH + GAP}px`,
     );
     expect(indicator.getAttribute("data-activation-direction")).toBe("right");
@@ -106,10 +110,21 @@ describe("Lightbox.ThumbnailIndicator", () => {
     await clickButton("Next image");
 
     expect(
-      screen
-        .getByTestId("indicator")
-        .style.getPropertyValue("--active-thumbnail-left"),
+      rest(screen.getByTestId("indicator"), "--active-thumbnail-left"),
     ).toBe(`${THUMBNAIL_WIDTH + GAP + 50}px`);
+  });
+
+  it("moves towards a neighbour with the swipe progress", async () => {
+    renderWithIndicator();
+    await openLightboxAt("Open image 2 of 3");
+    const left = screen
+      .getByTestId("indicator")
+      .style.getPropertyValue("--active-thumbnail-left");
+
+    // The slides move left to bring the next thumbnail in, right for the previous.
+    expect(left).toBe(
+      `calc(${THUMBNAIL_WIDTH + GAP}px + min(1, max(0, 1 * var(--lightbox-swipe-progress, 0))) * -${THUMBNAIL_WIDTH + GAP}px + min(1, max(0, -1 * var(--lightbox-swipe-progress, 0))) * ${THUMBNAIL_WIDTH + GAP}px)`,
+    );
   });
 
   it("measures again when a thumbnail changes size", async () => {
@@ -135,7 +150,7 @@ describe("Lightbox.ThumbnailIndicator", () => {
     const first = screen.getByTestId("thumbnail-a");
     const indicator = screen.getByTestId("indicator");
     expect(observed).toContain(first);
-    expect(indicator.style.getPropertyValue("--active-thumbnail-width")).toBe(
+    expect(rest(indicator, "--active-thumbnail-width")).toBe(
       `${THUMBNAIL_WIDTH}px`,
     );
 
@@ -146,9 +161,7 @@ describe("Lightbox.ThumbnailIndicator", () => {
     );
     await act(async () => notify());
 
-    expect(indicator.style.getPropertyValue("--active-thumbnail-width")).toBe(
-      "80px",
-    );
+    expect(rest(indicator, "--active-thumbnail-width")).toBe("80px");
   });
 
   it("throws outside Lightbox.ThumbnailList", () => {

@@ -3,11 +3,11 @@ import {
   LIGHTBOX_RENDERED_NEIGHBORS,
 } from "../constants";
 import type { LightboxMediaSize, LightboxItemValue } from "../types";
-import { clampLightboxCounter } from "./lightbox-geometry";
+import { clampLightboxValue } from "./lightbox-geometry";
 
 export function clampLightboxIndex(index: number, count: number): number {
   if (count <= 0) return 0;
-  return clampLightboxCounter(Math.round(index), 0, count - 1);
+  return clampLightboxValue(Math.round(index), 0, count - 1);
 }
 
 export function isLightboxItemRendered(

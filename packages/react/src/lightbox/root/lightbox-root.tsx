@@ -51,6 +51,11 @@ import {
   type LightboxTrackTransition,
 } from "./lightbox-root-context";
 import { getLightboxActivationDirection } from "../utils/lightbox-motion";
+import {
+  swipeMovementX,
+  swipeProgress,
+  swipeStrength,
+} from "../popup/lightbox-popup-css-vars";
 import { useLightboxZoom } from "./use-lightbox-zoom";
 
 /** Longest the viewer waits for its image before it counts as open (ms). */
@@ -496,6 +501,31 @@ export function LightboxRoot<Item = unknown>(
     changeIndex(target, { step: target - index, offset: fromOffset });
   });
 
+  // Stable, so the elements' refs only run when they mount and unmount. The
+  // CSS variables are there from the start, at rest.
+  const setPopupElement = useStableCallback((element: HTMLElement | null) => {
+    popupRef.current = element;
+    if (element) zoom.refresh();
+  });
+  const setBackdropElement = useStableCallback(
+    (element: HTMLElement | null) => {
+      backdropRef.current = element;
+      if (element) zoom.refresh();
+    },
+  );
+
+  // Every frame of a swipe: written to the popup directly, not rendered.
+  const setSwipe = useStableCallback((movementX: number, progress: number) => {
+    const popup = popupRef.current;
+    if (!popup) return;
+    popup.style.setProperty(swipeMovementX, `${movementX}px`);
+    popup.style.setProperty(swipeProgress, String(progress));
+  });
+
+  const setSwipeStrength = useStableCallback((strength: number) => {
+    popupRef.current?.style.setProperty(swipeStrength, String(strength));
+  });
+
   // Written to the elements directly: it changes at the start and end of each
   // gesture, and the popup shouldn't re-render for it.
   const setDragging = useStableCallback((dragging: boolean) => {
@@ -627,18 +657,16 @@ export function LightboxRoot<Item = unknown>(
       registerMedia,
       registerThumbnailList,
       getActiveMedia,
-      setPopupElement: (element) => {
-        popupRef.current = element;
-      },
-      setBackdropElement: (element) => {
-        backdropRef.current = element;
-      },
+      setPopupElement,
+      setBackdropElement,
       getZoom: zoom.getZoom,
       setZoom: zoom.setZoom,
       animateZoom: zoom.animateZoom,
       setDismiss: zoom.setDismiss,
       animateDismiss: zoom.animateDismiss,
       setDragging,
+      setSwipe,
+      setSwipeStrength,
       stepIndex,
       takeTrackTransition,
     }),

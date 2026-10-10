@@ -1,5 +1,31 @@
 import { AnimationFrame } from "@base-ui/utils/useAnimationFrame";
+import { LIGHTBOX_SWIPE_STRENGTH } from "../constants";
 import { LightboxActivationDirection } from "../types";
+import { clampLightboxValue } from "./lightbox-geometry";
+
+/**
+ * Strength of a released swipe, 0.1 to 1: how long the slides take to cover
+ * the `remaining` distance (px) at the release `velocity` (px/ms), scaled
+ * between the fastest and slowest settle. A slow release is `1`. Multiply a
+ * duration by it so the motion keeps the swipe's speed, as Base UI's drawer does.
+ */
+export function getLightboxSwipeStrength(
+  remaining: number,
+  velocity: number,
+): number {
+  const { minVelocity, maxVelocity, minDuration, maxDuration, min } =
+    LIGHTBOX_SWIPE_STRENGTH;
+  const speed = Math.abs(velocity);
+  if (remaining <= 0 || speed <= minVelocity) return 1;
+  const duration = clampLightboxValue(
+    remaining / clampLightboxValue(speed, minVelocity, maxVelocity),
+    minDuration,
+    maxDuration,
+  );
+  const strength =
+    min + ((duration - minDuration) / (maxDuration - minDuration)) * (1 - min);
+  return Math.round(strength * 1000) / 1000;
+}
 
 export interface LightboxSwipeRelease {
   /** Where the track is now, in px from the active item. */

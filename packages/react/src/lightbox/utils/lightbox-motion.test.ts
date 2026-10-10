@@ -3,7 +3,22 @@ import { LightboxActivationDirection } from "../types";
 import {
   getLightboxActivationDirection,
   getLightboxSwipeStep,
+  getLightboxSwipeStrength,
 } from "./lightbox-motion";
+
+describe("getLightboxSwipeStrength", () => {
+  it("is 1 for a slow release, or nothing left to cover", () => {
+    expect(getLightboxSwipeStrength(300, 0.1)).toBe(1);
+    expect(getLightboxSwipeStrength(0, 2)).toBe(1);
+  });
+
+  it("shrinks as the flick gets faster", () => {
+    // 300 px at 1 px/ms: 300 ms, near the slowest settle.
+    expect(getLightboxSwipeStrength(300, 1)).toBeCloseTo(0.807, 3);
+    // 300 px at 4 px/ms: 75 ms, clamped to the fastest.
+    expect(getLightboxSwipeStrength(300, -4)).toBe(0.1);
+  });
+});
 
 /** Items 400 px wide, no gap; a quarter of an item moves on; 0.3 px/ms is a flick. */
 const swipe = (offset: number, velocity: number, startOffset = 0) =>

@@ -14,7 +14,7 @@ export const LIGHTBOX_IDENTITY_DISMISS: LightboxDismiss = {
   scale: 1,
 };
 
-export function clampLightboxCounter(
+export function clampLightboxValue(
   value: number,
   min: number,
   max: number,
@@ -86,7 +86,7 @@ export function rubberbandLightboxOverflow(
 }
 
 /** `value` inside `[min, max]`, with a rubber band past the limits. */
-export function rubberbandLightboxCounter(
+export function rubberbandLightboxValue(
   value: number,
   min: number,
   max: number,
@@ -126,14 +126,14 @@ export function clampLightboxZoom(
   minScale: number,
   maxScale: number,
 ): LightboxZoom {
-  const scale = clampLightboxCounter(zoom.scale, minScale, maxScale);
+  const scale = clampLightboxValue(zoom.scale, minScale, maxScale);
   // Scaling back to rest also drops the pan.
   if (scale <= minScale) return { scale, x: 0, y: 0 };
   const bounds = getLightboxPanBounds(layout, scale);
   return {
     scale,
-    x: clampLightboxCounter(zoom.x, bounds.minX, bounds.maxX),
-    y: clampLightboxCounter(zoom.y, bounds.minY, bounds.maxY),
+    x: clampLightboxValue(zoom.x, bounds.minX, bounds.maxX),
+    y: clampLightboxValue(zoom.y, bounds.minY, bounds.maxY),
   };
 }
 

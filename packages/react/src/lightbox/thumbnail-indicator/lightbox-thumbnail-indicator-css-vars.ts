@@ -1,6 +1,7 @@
 /**
  * Distance from the left of the thumbnail list's content to the active
- * thumbnail.
+ * thumbnail. While a swipe drags the slides, it moves towards the next or
+ * previous thumbnail with them.
  * @type {number}
  */
 export const activeThumbnailLeft = "--active-thumbnail-left";
