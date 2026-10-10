@@ -2,12 +2,12 @@ import {
   LIGHTBOX_PRELOAD_TIMEOUT,
   LIGHTBOX_RENDERED_NEIGHBORS,
 } from "../constants";
-import type { LightboxImageSize, LightboxItemValue } from "../types";
-import { clampLightboxValue } from "./lightbox-geometry";
+import type { LightboxMediaSize, LightboxItemValue } from "../types";
+import { clampLightboxCounter } from "./lightbox-geometry";
 
 export function clampLightboxIndex(index: number, count: number): number {
   if (count <= 0) return 0;
-  return clampLightboxValue(Math.round(index), 0, count - 1);
+  return clampLightboxCounter(Math.round(index), 0, count - 1);
 }
 
 export function isLightboxItemRendered(
@@ -38,7 +38,7 @@ export function getLightboxItemValue(item: unknown): LightboxItemValue {
 
 /** Width / height from the loaded size, then the given size, else `null`. */
 export function getLightboxAspectRatio(
-  loaded: LightboxImageSize | undefined,
+  loaded: LightboxMediaSize | undefined,
   width: number | undefined,
   height: number | undefined,
 ): number | null {
@@ -56,19 +56,19 @@ export function toLightboxDimension(
 }
 
 /**
- * The default `loadImage`: loads the item's `src` and resolves with its
+ * The default `loadMedia`: loads the item's `src` and resolves with its
  * natural size, or `null` when the item has no `src`, the image fails, or it
  * takes longer than `LIGHTBOX_PRELOAD_TIMEOUT`. Never rejects.
  */
-export function loadLightboxImage(
+export function loadLightboxMedia(
   item: unknown,
-): Promise<LightboxImageSize | null> {
+): Promise<LightboxMediaSize | null> {
   const src = readLightboxField(item, "src");
   if (typeof src !== "string" || src === "") return Promise.resolve(null);
   return new Promise((resolve) => {
     const image = new Image();
     const timer = setTimeout(() => resolve(null), LIGHTBOX_PRELOAD_TIMEOUT);
-    const finish = (size: LightboxImageSize | null) => {
+    const finish = (size: LightboxMediaSize | null) => {
       clearTimeout(timer);
       resolve(size);
     };
@@ -77,4 +77,9 @@ export function loadLightboxImage(
     image.onerror = () => finish(null);
     image.src = src;
   });
+}
+
+/** Id of a slide, which its thumbnail controls. */
+export function getLightboxSlideId(rootId: string, index: number): string {
+  return `${rootId}-slide-${index}`;
 }

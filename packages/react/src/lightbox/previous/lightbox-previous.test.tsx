@@ -11,7 +11,7 @@ describe("Lightbox.Previous", () => {
 
     await act(async () => fireEvent.click(previous));
 
-    expect(screen.getByTestId("value").textContent).toBe("1 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
     expect(previous).toHaveProperty("disabled", true);
     expect(previous.hasAttribute("data-disabled")).toBe(true);
   });

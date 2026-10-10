@@ -2,16 +2,20 @@ export * as Lightbox from "./index.parts";
 
 export * as LightboxBackdropCssVars from "./backdrop/lightbox-backdrop-css-vars";
 export * as LightboxBackdropDataAttributes from "./backdrop/lightbox-backdrop-data-attributes";
-export * as LightboxFallbackDataAttributes from "./fallback/lightbox-fallback-data-attributes";
-export * as LightboxImageDataAttributes from "./image/lightbox-image-data-attributes";
-export * as LightboxItemDataAttributes from "./item/lightbox-item-data-attributes";
-export * as LightboxLoadingIndicatorDataAttributes from "./loading-indicator/lightbox-loading-indicator-data-attributes";
+export * as LightboxCaptionDataAttributes from "./caption/lightbox-caption-data-attributes";
+export * as LightboxCounterDataAttributes from "./counter/lightbox-counter-data-attributes";
+export * as LightboxDescriptionDataAttributes from "./description/lightbox-description-data-attributes";
+export * as LightboxMediaDataAttributes from "./media/lightbox-media-data-attributes";
 export * as LightboxNextDataAttributes from "./next/lightbox-next-data-attributes";
 export * as LightboxPopupCssVars from "./popup/lightbox-popup-css-vars";
 export * as LightboxPopupDataAttributes from "./popup/lightbox-popup-data-attributes";
 export * as LightboxPreviousDataAttributes from "./previous/lightbox-previous-data-attributes";
+export * as LightboxSlideDataAttributes from "./slide/lightbox-slide-data-attributes";
 export * as LightboxThumbnailDataAttributes from "./thumbnail/lightbox-thumbnail-data-attributes";
-export * as LightboxThumbnailsDataAttributes from "./thumbnails/lightbox-thumbnails-data-attributes";
+export * as LightboxThumbnailIndicatorCssVars from "./thumbnail-indicator/lightbox-thumbnail-indicator-css-vars";
+export * as LightboxThumbnailIndicatorDataAttributes from "./thumbnail-indicator/lightbox-thumbnail-indicator-data-attributes";
+export * as LightboxThumbnailListDataAttributes from "./thumbnail-list/lightbox-thumbnail-list-data-attributes";
+export * as LightboxTitleDataAttributes from "./title/lightbox-title-data-attributes";
 export * as LightboxTriggerDataAttributes from "./trigger/lightbox-trigger-data-attributes";
 export * as LightboxViewportDataAttributes from "./viewport/lightbox-viewport-data-attributes";
 export * as LightboxZoomInDataAttributes from "./zoom-in/lightbox-zoom-in-data-attributes";
@@ -27,41 +31,37 @@ export {
   LightboxBackdrop,
   type LightboxBackdropProps,
 } from "./backdrop/lightbox-backdrop";
+export {
+  LightboxCaption,
+  type LightboxCaptionProps,
+  type LightboxCaptionState,
+} from "./caption/lightbox-caption";
 export { LightboxClose, type LightboxCloseProps } from "./close/lightbox-close";
+export {
+  LightboxCounter,
+  type LightboxCounterProps,
+  type LightboxCounterState,
+} from "./counter/lightbox-counter";
 export {
   LightboxDescription,
   type LightboxDescriptionProps,
+  type LightboxDescriptionState,
 } from "./description/lightbox-description";
 export {
-  LightboxFallback,
-  type LightboxFallbackProps,
-  type LightboxFallbackState,
-} from "./fallback/lightbox-fallback";
-export {
-  LightboxImage,
-  type LightboxImageProps,
-  type LightboxImageState,
-} from "./image/lightbox-image";
-export {
-  LightboxItem,
-  type LightboxItemProps,
-  type LightboxItemState,
-} from "./item/lightbox-item";
-export {
-  useLightboxItemContext,
-  type LightboxItemContextValue,
-} from "./item/lightbox-item-context";
-export {
-  LightboxLoadingIndicator,
-  type LightboxLoadingIndicatorProps,
-  type LightboxLoadingIndicatorState,
-} from "./loading-indicator/lightbox-loading-indicator";
+  LightboxMedia,
+  type LightboxMediaProps,
+  type LightboxMediaState,
+} from "./media/lightbox-media";
 export {
   LightboxNext,
   type LightboxNextProps,
   type LightboxNextState,
 } from "./next/lightbox-next";
-export { LightboxPopup, type LightboxPopupProps } from "./popup/lightbox-popup";
+export {
+  LightboxPopup,
+  type LightboxPopupProps,
+  type LightboxPopupState,
+} from "./popup/lightbox-popup";
 export {
   LightboxPortal,
   type LightboxPortalProps,
@@ -80,26 +80,39 @@ export {
   type LightboxRootZoomContextValue,
 } from "./root/lightbox-root-context";
 export {
+  LightboxSlide,
+  type LightboxSlideProps,
+  type LightboxSlideState,
+} from "./slide/lightbox-slide";
+export {
+  useLightboxSlideContext,
+  type LightboxSlideContextValue,
+} from "./slide/lightbox-slide-context";
+export {
   LightboxThumbnail,
   type LightboxThumbnailProps,
   type LightboxThumbnailState,
 } from "./thumbnail/lightbox-thumbnail";
 export {
-  LightboxThumbnails,
-  type LightboxThumbnailsProps,
-  type LightboxThumbnailsState,
-} from "./thumbnails/lightbox-thumbnails";
-export { LightboxTitle, type LightboxTitleProps } from "./title/lightbox-title";
+  LightboxThumbnailIndicator,
+  type LightboxThumbnailIndicatorProps,
+  type LightboxThumbnailIndicatorState,
+} from "./thumbnail-indicator/lightbox-thumbnail-indicator";
+export {
+  LightboxThumbnailList,
+  type LightboxThumbnailListProps,
+  type LightboxThumbnailListState,
+} from "./thumbnail-list/lightbox-thumbnail-list";
+export {
+  LightboxTitle,
+  type LightboxTitleProps,
+  type LightboxTitleState,
+} from "./title/lightbox-title";
 export {
   LightboxTrigger,
   type LightboxTriggerProps,
   type LightboxTriggerState,
 } from "./trigger/lightbox-trigger";
-export {
-  LightboxValue,
-  type LightboxValueProps,
-  type LightboxValueState,
-} from "./value/lightbox-value";
 export {
   LightboxViewport,
   type LightboxViewportProps,
@@ -125,10 +138,12 @@ export {
   type LightboxZoomValueProps,
   type LightboxZoomValueState,
 } from "./zoom-value/lightbox-zoom-value";
+export type { LightboxTransitionStatus } from "./lightbox-state-attributes";
 export {
-  LightboxImageStatus,
+  LightboxActivationDirection,
+  LightboxMediaStatus,
   LightboxPhase,
-  type LightboxImageSize,
   type LightboxItemValue,
+  type LightboxMediaSize,
 } from "./types";
-export { loadLightboxImage } from "./utils/lightbox-items";
+export { loadLightboxMedia } from "./utils/lightbox-items";

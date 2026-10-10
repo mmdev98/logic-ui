@@ -16,12 +16,14 @@ export const ITEMS: TestItem[] = [
 ];
 
 /** Resolves at once, so the viewer opens without loading a real image. */
-export const loadImage = vi.fn<
-  NonNullable<LightboxRootProps<TestItem>["loadImage"]>
+export const loadMedia = vi.fn<
+  NonNullable<LightboxRootProps<TestItem>["loadMedia"]>
 >(() => Promise.resolve({ width: 400, height: 300 }));
 
 export type TestLightboxProps = Partial<LightboxRootProps<TestItem>> & {
-  /** Rendered inside each item, after the image. */
+  /** Rendered inside each slide's media, after the image. */
+  mediaChildren?: (item: TestItem) => React.ReactNode;
+  /** Rendered inside each slide, after the media. */
   itemChildren?: (item: TestItem) => React.ReactNode;
   /** Rendered inside the popup, after the controls. */
   popupChildren?: React.ReactNode;
@@ -29,9 +31,15 @@ export type TestLightboxProps = Partial<LightboxRootProps<TestItem>> & {
 
 /** A trigger per item and a viewer with every control. */
 export function TestLightbox(props: TestLightboxProps): React.ReactElement {
-  const { items = ITEMS, itemChildren, popupChildren, ...rootProps } = props;
+  const {
+    items = ITEMS,
+    mediaChildren,
+    itemChildren,
+    popupChildren,
+    ...rootProps
+  } = props;
   return (
-    <Lightbox.Root items={items} loadImage={loadImage} {...rootProps}>
+    <Lightbox.Root items={items} loadMedia={loadMedia} {...rootProps}>
       {items.map((item) => (
         <Lightbox.Trigger key={item.id} value={item.id} />
       ))}
@@ -41,10 +49,13 @@ export function TestLightbox(props: TestLightboxProps): React.ReactElement {
           <Lightbox.Title>Photos</Lightbox.Title>
           <Lightbox.Viewport data-testid="viewport">
             {(item: TestItem) => (
-              <Lightbox.Item data-testid={`item-${item.id}`}>
-                <Lightbox.Image src={item.src} alt={item.alt} />
+              <Lightbox.Slide data-testid={`slide-${item.id}`}>
+                <Lightbox.Media data-testid={`media-${item.id}`}>
+                  <img src={item.src} alt={item.alt} />
+                  {mediaChildren?.(item)}
+                </Lightbox.Media>
                 {itemChildren?.(item)}
-              </Lightbox.Item>
+              </Lightbox.Slide>
             )}
           </Lightbox.Viewport>
           <Lightbox.Description>
@@ -52,7 +63,7 @@ export function TestLightbox(props: TestLightboxProps): React.ReactElement {
           </Lightbox.Description>
           <Lightbox.Close>Close</Lightbox.Close>
           <Lightbox.Previous />
-          <Lightbox.Value data-testid="value" />
+          <Lightbox.Counter data-testid="counter" />
           <Lightbox.Next />
           <Lightbox.ZoomOut />
           <Lightbox.ZoomValue data-testid="zoom-value" />
@@ -86,5 +97,22 @@ export function firePointer(
     button: 0,
     clientX: x,
     clientY: y,
+  });
+}
+
+/** Lets a few animation frames run, such as the one `data-starting-style` lasts. */
+export function waitForFrames(): Promise<void> {
+  return act(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, 50);
+      }),
+  );
+}
+
+/** Clicks the button named `name` and flushes the update. */
+export async function clickButton(name: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }));
   });
 }

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Lightbox, useLightboxRootContext } from "..";
-import { ITEMS, loadImage, openLightboxAt, TestLightbox } from "../test-utils";
+import { ITEMS, loadMedia, openLightboxAt, TestLightbox } from "../test-utils";
 
 describe("Lightbox.Root", () => {
   it("returns focus to the trigger when the viewer closes", async () => {
@@ -29,7 +29,7 @@ describe("Lightbox.Root", () => {
   it("opens on defaultValue", async () => {
     render(<TestLightbox defaultValue="b" />);
     await screen.findByRole("dialog");
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
   });
 
   it("can control the value", async () => {
@@ -41,14 +41,14 @@ describe("Lightbox.Root", () => {
 
     rerender(<TestLightbox value="c" onValueChange={onValueChange} />);
     await screen.findByRole("dialog");
-    expect(screen.getByTestId("value").textContent).toBe("3 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
 
     // A controlled value only changes through the prop.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Previous image" }));
     });
     expect(onValueChange).toHaveBeenLastCalledWith("b");
-    expect(screen.getByTestId("value").textContent).toBe("3 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
 
     // Closing only reports `null`.
     await act(async () => {
@@ -66,7 +66,7 @@ describe("Lightbox.Root", () => {
     const added = { id: "z", src: "/z.jpg", alt: "New" };
     rerender(<TestLightbox items={[added, ...ITEMS]} />);
 
-    expect(screen.getByTestId("value").textContent).toBe("3 / 4");
+    expect(screen.getByTestId("counter").textContent).toBe("3 / 4");
     expect(screen.getByRole("img", { name: "Second" })).toBeTruthy();
   });
 
@@ -83,7 +83,7 @@ describe("Lightbox.Root", () => {
     );
 
     await waitFor(() => expect(onValueChange).toHaveBeenLastCalledWith("c"));
-    expect(screen.getByTestId("value").textContent).toBe("2 / 2");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 2");
   });
 
   it("closes when the last item is removed", async () => {
@@ -109,7 +109,7 @@ describe("Lightbox.Root", () => {
       <Lightbox.Root
         items={photos}
         itemToValue={(photo) => photo.key}
-        loadImage={() => Promise.resolve(null)}
+        loadMedia={() => Promise.resolve(null)}
         onValueChange={onValueChange}
       >
         <Lightbox.Trigger value={20} />
@@ -162,7 +162,7 @@ describe("Lightbox.createHandle", () => {
         <Lightbox.Root
           handle={handle}
           items={ITEMS}
-          loadImage={loadImage}
+          loadMedia={loadMedia}
           onValueChange={onValueChange}
         >
           <Lightbox.Portal>

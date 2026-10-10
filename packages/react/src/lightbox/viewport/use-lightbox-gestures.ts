@@ -15,18 +15,18 @@ import {
   LIGHTBOX_ZOOM_SCALE,
 } from "../constants";
 import type {
-  LightboxImageEntry,
+  LightboxMediaEntry,
   LightboxRootContextValue,
 } from "../root/lightbox-root-context";
 import { LightboxPhase, type LightboxZoom } from "../types";
 import {
-  clampLightboxValue,
+  clampLightboxCounter,
   clampLightboxZoom,
   LIGHTBOX_IDENTITY_DISMISS,
   getLightboxPanBounds,
   isLightboxZoomed,
   rubberbandLightboxOverflow,
-  rubberbandLightboxValue,
+  rubberbandLightboxCounter,
   zoomLightboxAroundPoint,
 } from "../utils/lightbox-geometry";
 import { getLightboxSwipeStep } from "../utils/lightbox-motion";
@@ -153,11 +153,11 @@ export function useLightboxGestures(
   };
 
   /**
-   * Height the close drag is measured against: the item's, or the viewport's
-   * when there is no image (one that failed shows `Lightbox.Fallback` instead).
+   * Height the close drag is measured against: the slide's, or the viewport's
+   * when the slide has no `Lightbox.Media`.
    */
-  const getDismissHeight = (entry: LightboxImageEntry | undefined): number =>
-    entry?.layout.itemHeight || getViewport()?.clientHeight || 1;
+  const getDismissHeight = (entry: LightboxMediaEntry | undefined): number =>
+    entry?.layout.slideHeight || getViewport()?.clientHeight || 1;
 
   /** `data-dragging` on the viewport only, for the cursor. */
   const setViewportDragging = (dragging: boolean) => {
@@ -246,8 +246,8 @@ export function useLightboxGestures(
 
     state.lastTap = null;
     tapTimeout.clear();
-    const entry = root.getActiveImage();
-    if (!entry) return;
+    const entry = root.getActiveMedia();
+    if (!entry?.zoomElement) return;
     const zoom = root.getZoom();
     if (isLightboxZoomed(zoom.scale, minScale)) {
       root.animateZoom({ scale: minScale, x: 0, y: 0 });
@@ -295,11 +295,11 @@ export function useLightboxGestures(
       if (!state.pointers.has(event.pointerId)) return;
       const point = toPoint(event);
       state.pointers.set(event.pointerId, point);
-      const entry = root.getActiveImage();
+      const entry = root.getActiveMedia();
 
       if (state.mode === GestureMode.Pinch) {
         const [a, b] = [...state.pointers.values()];
-        if (!a || !b || !entry) return;
+        if (!a || !b || !entry?.zoomElement) return;
         const center = getCenter(a, b);
         const rawScale =
           (state.zoomStart.scale * getDistance(a, b)) / state.pinchDistance;
@@ -356,12 +356,12 @@ export function useLightboxGestures(
         const { scale } = state.zoomStart;
         const bounds = getLightboxPanBounds(entry.layout, scale);
         const targetX = state.zoomStart.x + deltaX;
-        const x = clampLightboxValue(targetX, bounds.minX, bounds.maxX);
-        const y = rubberbandLightboxValue(
+        const x = clampLightboxCounter(targetX, bounds.minX, bounds.maxX);
+        const y = rubberbandLightboxCounter(
           state.zoomStart.y + deltaY,
           bounds.minY,
           bounds.maxY,
-          entry.layout.itemHeight,
+          entry.layout.slideHeight,
         );
         root.setZoom({ scale, x, y });
         // Past the image's edge, the drag carries on as a swipe.
@@ -415,7 +415,7 @@ export function useLightboxGestures(
           (sample) => event.timeStamp - sample.time <= VELOCITY_WINDOW,
         ),
       );
-      const entry = root.getActiveImage();
+      const entry = root.getActiveMedia();
 
       if (mode === GestureMode.Press) {
         if (!cancelled) {
@@ -467,14 +467,18 @@ export function useLightboxGestures(
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       if (root.phase !== LightboxPhase.Open) return;
-      const entry = root.getActiveImage();
-      if (!entry) return;
+      const entry = root.getActiveMedia();
+      if (!entry?.zoomElement) return;
       const lineHeight = event.deltaMode === 1 ? 16 : 1;
       // A trackpad pinch arrives as a wheel event with `ctrlKey`.
       const speed = event.ctrlKey ? 0.01 : 0.002;
       const factor = Math.exp(-event.deltaY * lineHeight * speed);
       const zoom = root.getZoom();
-      const scale = clampLightboxValue(zoom.scale * factor, minScale, maxScale);
+      const scale = clampLightboxCounter(
+        zoom.scale * factor,
+        minScale,
+        maxScale,
+      );
       root.setZoom(
         clampLightboxZoom(
           zoomLightboxAroundPoint(zoom, scale, toPoint(event), entry.layout),

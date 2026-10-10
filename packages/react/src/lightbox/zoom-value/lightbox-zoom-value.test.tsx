@@ -16,7 +16,7 @@ describe("Lightbox.ZoomValue", () => {
   it("formats the scale with a function child", () => {
     render(
       <Lightbox.Root items={ITEMS}>
-        <Lightbox.ZoomValue>{(scale) => `×${scale}`}</Lightbox.ZoomValue>
+        <Lightbox.ZoomValue>{(state) => `×${state.scale}`}</Lightbox.ZoomValue>
       </Lightbox.Root>,
     );
     expect(screen.getByText("×1")).toBeTruthy();

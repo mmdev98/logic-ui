@@ -15,10 +15,11 @@ export interface LightboxZoomValueProps extends Omit<
   "children"
 > {
   /**
-   * Content. A function receives the scale, to format it.
+   * Content. A function receives the state, to format the scale.
    * @default `${Math.round(scale * 100)}%`
    */
-  children?: React.ReactNode | ((scale: number) => React.ReactNode);
+  children?:
+    React.ReactNode | ((state: LightboxZoomValueState) => React.ReactNode);
 }
 
 /**
@@ -47,7 +48,7 @@ export function LightboxZoomValue(
       {
         children:
           typeof children === "function"
-            ? children(scale)
+            ? children(state)
             : (children ?? `${Math.round(scale * 100)}%`),
       },
       elementProps,

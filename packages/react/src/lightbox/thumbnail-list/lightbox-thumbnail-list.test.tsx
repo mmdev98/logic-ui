@@ -1,19 +1,19 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { Lightbox, type LightboxThumbnailsProps } from "..";
+import { Lightbox, type LightboxThumbnailListProps } from "..";
 import { openLightboxAt, TestLightbox, type TestItem } from "../test-utils";
 
-type ThumbnailsOptions = Omit<LightboxThumbnailsProps, "children">;
+type ThumbnailsOptions = Omit<LightboxThumbnailListProps, "children">;
 
 function renderWithThumbnails(options: ThumbnailsOptions = {}): void {
   render(
     <TestLightbox
       popupChildren={
-        <Lightbox.Thumbnails data-testid="strip" {...options}>
+        <Lightbox.ThumbnailList data-testid="strip" {...options}>
           {(item: TestItem) => (
             <Lightbox.Thumbnail data-testid={`thumbnail-${item.id}`} />
           )}
-        </Lightbox.Thumbnails>
+        </Lightbox.ThumbnailList>
       }
     />,
   );
@@ -50,17 +50,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Lightbox.Thumbnails", () => {
-  it("renders a labelled toolbar with a thumbnail per item", async () => {
+describe("Lightbox.ThumbnailList", () => {
+  it("renders a labelled tab list with a tab per item", async () => {
     renderWithThumbnails();
     await openLightboxAt("Open image 1 of 3");
-    const toolbar = screen.getByRole("toolbar", { name: "Thumbnails" });
+    const list = screen.getByRole("tablist", { name: "Thumbnails" });
 
-    expect(toolbar.getAttribute("aria-orientation")).toBe("horizontal");
-    expect(toolbar.getAttribute("data-orientation")).toBe("horizontal");
-    expect(
-      screen.getByRole("button", { name: "Show image 3 of 3" }),
-    ).toBeTruthy();
+    expect(list.getAttribute("aria-orientation")).toBe("horizontal");
+    expect(list.getAttribute("data-orientation")).toBe("horizontal");
+    expect(screen.getByRole("tab", { name: "Show image 3 of 3" })).toBeTruthy();
+  });
+
+  it("makes the slides its tab panels", async () => {
+    renderWithThumbnails();
+    await openLightboxAt("Open image 1 of 3");
+
+    expect(screen.getByTestId("slide-a").getAttribute("role")).toBe("tabpanel");
   });
 
   it("is a single tab stop on the active thumbnail", async () => {
@@ -90,7 +95,7 @@ describe("Lightbox.Thumbnails", () => {
     const target = screen.getByTestId(`thumbnail-${to}`);
     expect(document.activeElement).toBe(target);
     expect(target.tabIndex).toBe(0);
-    expect(screen.getByTestId("value").textContent).toBe(value);
+    expect(screen.getByTestId("counter").textContent).toBe(value);
   });
 
   it("only moves focus with activateOnFocus={false}", async () => {
@@ -102,7 +107,7 @@ describe("Lightbox.Thumbnails", () => {
     fireEvent.keyDown(from, { key: "ArrowRight" });
 
     expect(document.activeElement).toBe(screen.getByTestId("thumbnail-c"));
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
   });
 
   it("uses the up and down arrows when vertical", async () => {
@@ -118,7 +123,7 @@ describe("Lightbox.Thumbnails", () => {
       fireEvent.keyDown(first, { key: "ArrowDown" });
     });
     expect(document.activeElement).toBe(screen.getByTestId("thumbnail-b"));
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
   });
 
   it("scrolls the active thumbnail to the centre when the item changes", async () => {
@@ -188,7 +193,7 @@ describe("Lightbox.Thumbnails", () => {
     });
 
     expect(strip.hasAttribute("data-dragging")).toBe(false);
-    expect(screen.getByTestId("value").textContent).toBe("1 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
   });
 
   it("turns the vertical wheel into horizontal scrolling", async () => {

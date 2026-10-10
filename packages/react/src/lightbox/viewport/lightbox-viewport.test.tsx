@@ -37,6 +37,15 @@ function getTrack() {
 }
 
 describe("Lightbox.Viewport", () => {
+  it("is a labelled carousel region", async () => {
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 1 of 3");
+    const viewport = screen.getByRole("region", { name: "Gallery" });
+
+    expect(viewport).toBe(screen.getByTestId("viewport"));
+    expect(viewport.getAttribute("aria-roledescription")).toBe("carousel");
+  });
+
   it("renders only the active item and its neighbours", async () => {
     const items = ["a", "b", "c", "d", "e"].map((id) => ({
       id,
@@ -46,9 +55,9 @@ describe("Lightbox.Viewport", () => {
     render(<TestLightbox items={items} />);
     await openLightboxAt("Open image 1 of 5");
 
-    expect(screen.getByTestId("item-a")).toBeTruthy();
-    expect(screen.getByTestId("item-b")).toBeTruthy();
-    expect(screen.queryByTestId("item-c")).toBeNull();
+    expect(screen.getByTestId("slide-a")).toBeTruthy();
+    expect(screen.getByTestId("slide-b")).toBeTruthy();
+    expect(screen.queryByTestId("slide-c")).toBeNull();
   });
 
   it("slides a jump of several items like a step to a neighbour", async () => {
@@ -59,7 +68,7 @@ describe("Lightbox.Viewport", () => {
     }));
     render(<TestLightbox items={items} />);
     await openLightboxAt("Open image 1 of 5");
-    const first = screen.getByTestId("item-a");
+    const first = screen.getByTestId("slide-a");
 
     await act(async () => {
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
@@ -68,9 +77,9 @@ describe("Lightbox.Viewport", () => {
     // The item it left is drawn next to the new one, in the neighbour's slot,
     // and the track starts one item away from the new one.
     const slot = `translate3d(${3 * ITEM_WIDTH}px, 0px, 0px)`;
-    expect(screen.getByTestId("item-a")).toBe(first);
+    expect(screen.getByTestId("slide-a")).toBe(first);
     expect(first.style.transform).toBe(slot);
-    expect(screen.queryByTestId("item-d")).toBeNull();
+    expect(screen.queryByTestId("slide-d")).toBeNull();
     expect(getTrack().style.transform).toBe(
       `translate3d(${-3 * ITEM_WIDTH}px, 0px, 0px)`,
     );
@@ -80,15 +89,15 @@ describe("Lightbox.Viewport", () => {
     expect(getTrack().style.transform).toBe(
       `translate3d(${-4 * ITEM_WIDTH}px, 0px, 0px)`,
     );
-    expect(screen.queryByTestId("item-a")).toBeNull();
-    expect(screen.getByTestId("item-d").style.transform).toBe(slot);
+    expect(screen.queryByTestId("slide-a")).toBeNull();
+    expect(screen.getByTestId("slide-d").style.transform).toBe(slot);
   });
 
   it("goes to the next item after a swipe", async () => {
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");
     const viewport = screen.getByTestId("viewport");
-    expect(screen.getByTestId("value").textContent).toBe("1 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
 
     await act(async () => {
       firePointer("pointerDown", viewport, 300, 200);
@@ -98,7 +107,7 @@ describe("Lightbox.Viewport", () => {
       firePointer("pointerUp", viewport, 100, 205);
     });
 
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
     expect(viewport.hasAttribute("data-dragging")).toBe(false);
   });
 
@@ -113,7 +122,7 @@ describe("Lightbox.Viewport", () => {
       firePointer("pointerMove", viewport, 100, 200);
       firePointer("pointerUp", viewport, 100, 200);
     });
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
 
     // A click while the track still slides to the second item.
     await wait(50);
@@ -126,7 +135,7 @@ describe("Lightbox.Viewport", () => {
     });
 
     await wait(500);
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
     expect(getTrack().style.transform).toBe(
       `translate3d(${-ITEM_WIDTH}px, 0px, 0px)`,
     );
@@ -204,7 +213,7 @@ describe("Lightbox.Viewport", () => {
       firePointer("pointerUp", viewport, 250, 200);
     });
 
-    expect(screen.getByTestId("value").textContent).toBe("1 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
   });
 
   it("closes after a drag down", async () => {

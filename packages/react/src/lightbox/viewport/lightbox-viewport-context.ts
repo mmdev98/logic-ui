@@ -11,8 +11,8 @@ export interface LightboxViewportContextValue {
   directionSign: 1 | -1;
 }
 
-/** The item a `Lightbox.Viewport` child renders, so `Lightbox.Item` needs no props. */
-export interface LightboxViewportItemContextValue {
+/** The item a `Lightbox.Viewport` child renders, so `Lightbox.Slide` needs no props. */
+export interface LightboxViewportSlideContextValue {
   index: number;
   /**
    * Slot on the track the item is drawn at. Its index, except for the item
@@ -24,26 +24,26 @@ export interface LightboxViewportItemContextValue {
 export const LightboxViewportContext =
   createContext<LightboxViewportContextValue | null>(null);
 
-export const LightboxViewportItemContext =
-  createContext<LightboxViewportItemContextValue | null>(null);
+export const LightboxViewportSlideContext =
+  createContext<LightboxViewportSlideContextValue | null>(null);
 
 export function useLightboxViewportContext(): LightboxViewportContextValue {
   const context = use(LightboxViewportContext);
   if (!context) {
     throw new Error(
       "Base UI: LightboxViewportContext is missing. " +
-        "Lightbox.Item must be placed within <Lightbox.Viewport>.",
+        "Lightbox.Slide must be placed within <Lightbox.Viewport>.",
     );
   }
   return context;
 }
 
-export function useLightboxViewportItemContext(): LightboxViewportItemContextValue {
-  const context = use(LightboxViewportItemContext);
+export function useLightboxViewportSlideContext(): LightboxViewportSlideContextValue {
+  const context = use(LightboxViewportSlideContext);
   if (!context) {
     throw new Error(
-      "Base UI: LightboxViewportItemContext is missing. " +
-        "Lightbox.Item must be returned by the function passed to <Lightbox.Viewport>.",
+      "Base UI: LightboxViewportSlideContext is missing. " +
+        "Lightbox.Slide must be returned by the function passed to <Lightbox.Viewport>.",
     );
   }
   return context;

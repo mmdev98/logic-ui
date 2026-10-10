@@ -13,33 +13,38 @@ function renderWithThumbnails(
 ): void {
   render(
     <TestLightbox
-      popupChildren={<Lightbox.Thumbnails>{thumbnail}</Lightbox.Thumbnails>}
+      popupChildren={
+        <Lightbox.ThumbnailList>{thumbnail}</Lightbox.ThumbnailList>
+      }
     />,
   );
 }
 
 describe("Lightbox.Thumbnail", () => {
-  it("marks the active item with aria-current and data-active", async () => {
+  it("is a tab, selected and controlling the slide while its item is shown", async () => {
     renderWithThumbnails(() => <Lightbox.Thumbnail />);
     await openLightboxAt("Open image 1 of 3");
-    const first = screen.getByRole("button", { name: "Show image 1 of 3" });
-    const second = screen.getByRole("button", { name: "Show image 2 of 3" });
+    const first = screen.getByRole("tab", { name: "Show image 1 of 3" });
+    const second = screen.getByRole("tab", { name: "Show image 2 of 3" });
 
     expect(first).toHaveProperty("type", "button");
-    expect(first.getAttribute("aria-current")).toBe("true");
+    expect(first.getAttribute("aria-selected")).toBe("true");
     expect(first.hasAttribute("data-active")).toBe(true);
-    expect(second.hasAttribute("aria-current")).toBe(false);
+    const controls = first.getAttribute("aria-controls");
+    expect(controls).toBe(screen.getByTestId("slide-a").id);
+    expect(second.getAttribute("aria-selected")).toBe("false");
+    expect(second.hasAttribute("aria-controls")).toBe(false);
   });
 
   it("shows its item when clicked", async () => {
     renderWithThumbnails(() => <Lightbox.Thumbnail />);
     await openLightboxAt("Open image 1 of 3");
-    const third = screen.getByRole("button", { name: "Show image 3 of 3" });
+    const third = screen.getByRole("tab", { name: "Show image 3 of 3" });
     expect(third.hasAttribute("data-active")).toBe(false);
 
     await act(async () => fireEvent.click(third));
 
-    expect(screen.getByTestId("value").textContent).toBe("3 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
     expect(third.hasAttribute("data-active")).toBe(true);
   });
 
@@ -51,14 +56,14 @@ describe("Lightbox.Thumbnail", () => {
     await openLightboxAt("Open image 1 of 3");
 
     await act(async () =>
-      fireEvent.click(screen.getByRole("button", { name: "Second" })),
+      fireEvent.click(screen.getByRole("tab", { name: "Second" })),
     );
 
     expect(onClick).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
   });
 
-  it("throws outside Lightbox.Thumbnails", () => {
+  it("throws outside Lightbox.ThumbnailList", () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
@@ -68,7 +73,7 @@ describe("Lightbox.Thumbnail", () => {
           <Lightbox.Thumbnail />
         </Lightbox.Root>,
       ),
-    ).toThrow("Base UI: LightboxThumbnailsContext is missing.");
+    ).toThrow("Base UI: LightboxThumbnailListContext is missing.");
     consoleError.mockRestore();
   });
 });

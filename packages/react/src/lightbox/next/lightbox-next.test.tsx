@@ -14,7 +14,7 @@ describe("Lightbox.Next", () => {
 
     await act(async () => fireEvent.click(next));
 
-    expect(screen.getByTestId("value").textContent).toBe("3 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
     expect(next).toHaveProperty("disabled", true);
     expect(next.hasAttribute("data-disabled")).toBe(true);
   });
@@ -45,7 +45,7 @@ describe("Lightbox.Next", () => {
     render(
       <Lightbox.Root items={ITEMS}>
         <Lightbox.Next onClick={onClick} />
-        <Lightbox.Value />
+        <Lightbox.Counter />
       </Lightbox.Root>,
     );
 

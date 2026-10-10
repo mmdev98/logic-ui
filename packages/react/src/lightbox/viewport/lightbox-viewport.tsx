@@ -8,12 +8,14 @@ import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import * as React from "react";
 import { LIGHTBOX_SETTLE_DURATION } from "../constants";
+import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
+import type { LightboxActivationDirection } from "../types";
 import { isLightboxItemRendered } from "../utils/lightbox-items";
 import { tweenLightbox } from "../utils/lightbox-motion";
 import {
   LightboxViewportContext,
-  LightboxViewportItemContext,
+  LightboxViewportSlideContext,
   type LightboxViewportContextValue,
 } from "./lightbox-viewport-context";
 import { useLightboxGestures } from "./use-lightbox-gestures";
@@ -21,6 +23,8 @@ import { useLightboxGestures } from "./use-lightbox-gestures";
 export type LightboxViewportState = {
   /** Whether the active image is zoomed in. */
   zoomed: boolean;
+  /** Side of the previous item the item shown came from, on screen. */
+  activationDirection: LightboxActivationDirection;
 };
 
 export interface LightboxViewportProps extends Omit<
@@ -28,7 +32,7 @@ export interface LightboxViewportProps extends Omit<
   "children"
 > {
   /**
-   * Renders one item: a `Lightbox.Item` with a `Lightbox.Image` or other
+   * Renders one item: a `Lightbox.Slide` with a `Lightbox.Image` or other
    * content inside. Receives the item as passed to `items`. Called only for
    * the active item and its neighbours.
    */
@@ -44,11 +48,13 @@ const INITIAL_METRICS: LightboxViewportContextValue = {
 };
 
 /**
- * The swipeable strip of images. Handles the gestures: swipe, pinch, double
- * tap, pan, drag to close, wheel zoom. Give it a size (usually
- * `position: absolute; inset: 0` in the popup). Set the space between items with
- * `column-gap` (`gap-4`). Has `data-dragging` while a finger or the mouse
- * drags. Renders a `<div>` element.
+ * The window the slides swipe through: a carousel region that clips them and
+ * handles the gestures (swipe, pinch, double tap, pan, drag to close, wheel
+ * zoom). Give it a size (usually `position: absolute; inset: 0` in the
+ * popup), and set the space between slides with `column-gap` (`gap-4`).
+ * It has `data-dragging` while a finger or the mouse drags, and
+ * `data-activation-direction` after the item shown changes.
+ * Renders a `<div>` element.
  */
 export function LightboxViewport(
   props: LightboxViewportProps,
@@ -56,7 +62,14 @@ export function LightboxViewport(
   const { children, render, ref, ...elementProps } = props;
 
   const root = useLightboxRootContext();
-  const { items, values, index, zoomed, takeTrackTransition } = root;
+  const {
+    items,
+    values,
+    index,
+    zoomed,
+    activationDirection,
+    takeTrackTransition,
+  } = root;
 
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const trackRef = React.useRef<HTMLDivElement | null>(null);
@@ -182,8 +195,8 @@ export function LightboxViewport(
   });
 
   const state: LightboxViewportState = React.useMemo(
-    () => ({ zoomed }),
-    [zoomed],
+    () => ({ zoomed, activationDirection }),
+    [zoomed, activationDirection],
   );
 
   const element = useRender({
@@ -191,9 +204,13 @@ export function LightboxViewport(
     render,
     ref: mergedRef,
     state,
+    stateAttributesMapping: LIGHTBOX_STATE_ATTRIBUTES,
     props: mergeProps<"div">(
       {
+        // The WAI-ARIA carousel pattern.
+        role: "region",
         "aria-roledescription": "carousel",
+        "aria-label": "Gallery",
         // Its size and position come from the app (`position: absolute; inset: 0`).
         style: {
           overflow: "hidden",
@@ -226,12 +243,12 @@ export function LightboxViewport(
                 position = jumpSlot;
               if (position === null) return null;
               return (
-                <LightboxViewportItemContext
+                <LightboxViewportSlideContext
                   key={values[itemIndex]}
                   value={{ index: itemIndex, position }}
                 >
                   {children(item, itemIndex)}
-                </LightboxViewportItemContext>
+                </LightboxViewportSlideContext>
               );
             })}
           </div>

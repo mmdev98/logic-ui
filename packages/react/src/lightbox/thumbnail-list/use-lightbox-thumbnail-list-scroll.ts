@@ -7,14 +7,14 @@ import * as React from "react";
 import { LIGHTBOX_DRAG_THRESHOLD } from "../constants";
 import { prefersLightboxReducedMotion } from "../utils/lightbox-flight";
 
-export interface UseLightboxThumbnailsScrollOptions {
+export interface UseLightboxThumbnailListScrollOptions {
   orientation: "horizontal" | "vertical";
   /** Index of the item shown in the viewer: its thumbnail is kept centred. */
   activeIndex: number;
   getThumbnail: (index: number) => HTMLElement | undefined;
 }
 
-export interface UseLightboxThumbnailsScrollResult {
+export interface UseLightboxThumbnailListScrollResult {
   ref: React.RefObject<HTMLDivElement | null>;
   /** Whether thumbnails are hidden before the start of the strip. */
   overflowStart: boolean;
@@ -36,13 +36,13 @@ type DragState = {
 const EDGE = 1;
 
 /**
- * Scrolls the strip of `Lightbox.Thumbnails`: keeps the active thumbnail
+ * Scrolls the strip of `Lightbox.ThumbnailList`: keeps the active thumbnail
  * centred, lets the mouse drag the strip and the wheel scroll a horizontal
  * one, and reports which ends have hidden thumbnails. Touch scrolls natively.
  */
-export function useLightboxThumbnailsScroll(
-  options: UseLightboxThumbnailsScrollOptions,
-): UseLightboxThumbnailsScrollResult {
+export function useLightboxThumbnailListScroll(
+  options: UseLightboxThumbnailListScrollOptions,
+): UseLightboxThumbnailListScrollResult {
   const { orientation, activeIndex, getThumbnail } = options;
   const horizontal = orientation === "horizontal";
 

@@ -2,9 +2,10 @@
 
 import { createContext, use } from "react";
 import {
+  type LightboxActivationDirection,
   type LightboxDismiss,
-  type LightboxImageLayout,
-  type LightboxImageSize,
+  type LightboxMediaLayout,
+  type LightboxMediaSize,
   LightboxPhase,
   type LightboxItemValue,
   type LightboxZoom,
@@ -19,11 +20,23 @@ export type LightboxTrackTransition = {
   offset: number;
 };
 
-/** An image registered by `Lightbox.Image`, for gestures and flights. */
-export type LightboxImageEntry = {
+/** A media registered by `Lightbox.Media`, for gestures and flights. */
+export type LightboxMediaEntry = {
+  /** The `Lightbox.Media` box: it flies and follows the drag to close. */
   element: HTMLElement;
-  itemElement: HTMLElement;
-  layout: LightboxImageLayout;
+  /** Its `<img>`, which zooms and pans, or `null` when the media can't zoom. */
+  zoomElement: HTMLElement | null;
+  slideElement: HTMLElement;
+  layout: LightboxMediaLayout;
+};
+
+/**
+ * A `Lightbox.ThumbnailList` registered with the root, so the slides know
+ * they are tab panels and `Lightbox.ThumbnailIndicator` can measure it.
+ */
+export type LightboxThumbnailListEntry = {
+  element: HTMLElement;
+  getThumbnail: (index: number) => HTMLElement | undefined;
 };
 
 export interface LightboxRootContextValue {
@@ -49,8 +62,14 @@ export interface LightboxRootContextValue {
   hasNext: boolean;
   minScale: number;
   maxScale: number;
-  /** Natural sizes of the images loaded so far, by item value. */
-  imageSizes: ReadonlyMap<LightboxItemValue, LightboxImageSize>;
+  /** Natural sizes of the media loaded so far, by item value. */
+  mediaSizes: ReadonlyMap<LightboxItemValue, LightboxMediaSize>;
+  /** Side of the previous item the item shown came from, on screen. */
+  activationDirection: LightboxActivationDirection;
+  /** Prefix of the ids that link the thumbnails to the slides. */
+  id: string;
+  /** The `Lightbox.ThumbnailList`, when there is one. */
+  thumbnailList: LightboxThumbnailListEntry | null;
   /** Loads the item's image, then opens the viewer on it. The image flies from `trigger`, and focus returns to it on close. */
   openValue: (
     value: LightboxItemValue,
@@ -69,27 +88,20 @@ export interface LightboxRootContextValue {
   // Wiring between the lightbox parts.
   /** Element focused when the viewer closes. */
   getFinalFocus: () => HTMLElement | null;
-  setImageSize: (value: LightboxItemValue, size: LightboxImageSize) => void;
+  setMediaSize: (value: LightboxItemValue, size: LightboxMediaSize) => void;
   /** Registers a trigger to fly to and from. Returns the unregister function. */
   registerTrigger: (
     value: LightboxItemValue,
     element: HTMLElement,
   ) => () => void;
-  /** Registers an item's image. Returns the unregister function. */
-  registerImage: (
+  /** Registers a slide's media. Returns the unregister function. */
+  registerMedia: (
     value: LightboxItemValue,
-    entry: LightboxImageEntry,
+    entry: LightboxMediaEntry,
   ) => () => void;
-  /**
-   * Registers an element of an item that moves with the close drag and fades
-   * out on close when the item has no image to fly back, such as
-   * `Lightbox.Fallback`. Returns the unregister function.
-   */
-  registerDismissFollower: (
-    value: LightboxItemValue,
-    element: HTMLElement,
-  ) => () => void;
-  getActiveImage: () => LightboxImageEntry | undefined;
+  getActiveMedia: () => LightboxMediaEntry | undefined;
+  /** Registers the `Lightbox.ThumbnailList`. Returns the unregister function. */
+  registerThumbnailList: (entry: LightboxThumbnailListEntry) => () => void;
   setPopupElement: (element: HTMLElement | null) => void;
   setBackdropElement: (element: HTMLElement | null) => void;
   getZoom: () => LightboxZoom;

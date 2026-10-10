@@ -1,14 +1,35 @@
 "use client";
 
-import { Dialog, type DialogPopupProps } from "@base-ui/react/dialog";
+import {
+  Dialog,
+  type DialogPopupProps,
+  type DialogPopupState,
+} from "@base-ui/react/dialog";
 import { ownerWindow } from "@base-ui/utils/owner";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import * as React from "react";
 import { LIGHTBOX_KEYBOARD_PAN_STEP } from "../constants";
+import {
+  addLightboxState,
+  type LightboxStateProps,
+} from "../lightbox-dialog-state";
+import { getLightboxStateAttributes } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { LightboxPhase } from "../types";
+import { type LightboxActivationDirection, LightboxPhase } from "../types";
 
-export type LightboxPopupProps = DialogPopupProps;
+export type LightboxPopupState = DialogPopupState & {
+  /** Whether the active image is zoomed in. */
+  zoomed: boolean;
+  /** Whether a tap hid the controls. */
+  controlsHidden: boolean;
+  /** Side of the previous item the item shown came from, on screen. */
+  activationDirection: LightboxActivationDirection;
+};
+
+export interface LightboxPopupProps
+  extends
+    Omit<DialogPopupProps, "className" | "style" | "render">,
+    LightboxStateProps<LightboxPopupState> {}
 
 type LightboxPopupKeyboardEvent = Parameters<
   NonNullable<DialogPopupProps["onKeyDown"]>
@@ -29,6 +50,9 @@ const KEYBOARD_WIDGETS = [
   '[role="slider"]',
   '[role="spinbutton"]',
   '[role="textbox"]',
+  // A focused player seeks and changes the volume with the arrow keys.
+  "video[controls]",
+  "audio[controls]",
   "input",
   "textarea",
   "select",
@@ -51,7 +75,7 @@ function isInLightboxKeyboardWidget(
  *
  * Keys: ← → previous / next (pan while zoomed), ↑ ↓ pan, Home / End first /
  * last, + − zoom, 0 reset zoom, Esc close. Inside a widget that uses these
- * keys itself (a Base UI `Toolbar`, `Lightbox.Thumbnails`, a slider, a text
+ * keys itself (a Base UI `Toolbar`, `Lightbox.ThumbnailList`, a slider, a text
  * field), they stay that widget's.
  *
  * Has `data-zoomed` while the image is zoomed, `data-controls-hidden` after a
@@ -62,13 +86,14 @@ function isInLightboxKeyboardWidget(
  * Renders a `<div>` element.
  */
 export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
-  const { ref, onKeyDown, ...elementProps } = props;
+  const { ref, onKeyDown, className, style, render, ...elementProps } = props;
 
   const {
     items,
     phase,
     zoomed,
     controlsHidden,
+    activationDirection,
     getFinalFocus,
     goTo,
     goToPrevious,
@@ -80,6 +105,11 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
     setPopupElement,
   } = useLightboxRootContext();
   const mergedRef = useMergedRefs(ref, setPopupElement);
+
+  const extra = React.useMemo(
+    () => ({ zoomed, controlsHidden, activationDirection }),
+    [zoomed, controlsHidden, activationDirection],
+  );
 
   const handleKeyDown = (event: LightboxPopupKeyboardEvent) => {
     // The caller's handler runs first and can prevent the shortcut.
@@ -132,7 +162,12 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
       data-controls-hidden={controlsHidden ? "" : undefined}
       // The dialog stays open while the image flies back.
       data-ending-style={phase === LightboxPhase.Closing ? "" : undefined}
+      {...getLightboxStateAttributes(extra)}
       {...elementProps}
+      {...addLightboxState<DialogPopupState, typeof extra>(
+        { className, style, render },
+        extra,
+      )}
       onKeyDown={handleKeyDown}
     />
   );

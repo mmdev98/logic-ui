@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getLightboxSwipeStep } from "./lightbox-motion";
+import { LightboxActivationDirection } from "../types";
+import {
+  getLightboxActivationDirection,
+  getLightboxSwipeStep,
+} from "./lightbox-motion";
 
 /** Items 400 px wide, no gap; a quarter of an item moves on; 0.3 px/ms is a flick. */
 const swipe = (offset: number, velocity: number, startOffset = 0) =>
@@ -57,5 +61,18 @@ describe("getLightboxSwipeStep", () => {
         minVelocity: 0.3,
       }),
     ).toBe(0);
+  });
+});
+
+describe("getLightboxActivationDirection", () => {
+  it.each([
+    [1, "ltr", LightboxActivationDirection.Right],
+    [-1, "ltr", LightboxActivationDirection.Left],
+    [3, "ltr", LightboxActivationDirection.Right],
+    [1, "rtl", LightboxActivationDirection.Left],
+    [-1, "rtl", LightboxActivationDirection.Right],
+    [0, "ltr", LightboxActivationDirection.None],
+  ] as const)("a step of %s in %s comes from the %s", (step, dir, expected) => {
+    expect(getLightboxActivationDirection(step, dir)).toBe(expected);
   });
 });

@@ -1,10 +1,13 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
+import { useDirection } from "@base-ui/react/direction-provider";
 import { ownerWindow } from "@base-ui/utils/owner";
+import { AnimationFrame } from "@base-ui/utils/useAnimationFrame";
 import { useControlled } from "@base-ui/utils/useControlled";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useStableCallback } from "@base-ui/utils/useStableCallback";
+import { useId } from "@base-ui/utils/useId";
 import { useTimeout } from "@base-ui/utils/useTimeout";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import * as React from "react";
@@ -14,7 +17,8 @@ import {
   LIGHTBOX_ZOOM_SCALE,
 } from "../constants";
 import {
-  type LightboxImageSize,
+  LightboxActivationDirection,
+  type LightboxMediaSize,
   LightboxPhase,
   type LightboxRect,
   type LightboxItemValue,
@@ -34,17 +38,19 @@ import {
 import {
   clampLightboxIndex,
   getLightboxItemValue,
-  loadLightboxImage,
+  loadLightboxMedia,
 } from "../utils/lightbox-items";
 import type { LightboxHandle } from "./lightbox-handle";
 import {
-  type LightboxImageEntry,
+  type LightboxMediaEntry,
+  type LightboxThumbnailListEntry,
   LightboxRootContext,
   type LightboxRootContextValue,
   LightboxRootZoomContext,
   type LightboxRootZoomContextValue,
   type LightboxTrackTransition,
 } from "./lightbox-root-context";
+import { getLightboxActivationDirection } from "../utils/lightbox-motion";
 import { useLightboxZoom } from "./use-lightbox-zoom";
 
 /** Longest the viewer waits for its image before it counts as open (ms). */
@@ -54,7 +60,7 @@ const OPENING_FALLBACK_DELAY = LIGHTBOX_FLIGHT_DURATION + 1000;
  * Runs a flight with the Web Animations API and calls `onFinish` when it
  * ends. Finishes at once where the API is missing (jsdom, old browsers).
  */
-function animateLightboxImage(
+function animateLightboxMedia(
   element: HTMLElement,
   keyframes: Keyframe[],
   onFinish: () => void,
@@ -103,14 +109,14 @@ export interface LightboxRootProps<Item = unknown> {
    */
   handle?: LightboxHandle;
   /**
-   * Loads an item's image before the viewer opens, so it shows at once and
+   * Loads an item's media before the viewer opens, so it shows at once and
    * flies from its trigger at the right size. Resolves with its natural
-   * size, or `null`. The default loads the item's `src`, when it has one;
-   * pass your own when `Lightbox.Image` requests another URL, such as a
-   * resized one.
-   * @default loadLightboxImage
+   * size, or `null`. The default loads the item's `src` as an image, when it
+   * has one; pass your own when `Lightbox.Media` shows another URL, such as a
+   * resized image, or a video.
+   * @default loadLightboxMedia
    */
-  loadImage?: (item: Item) => Promise<LightboxImageSize | null>;
+  loadMedia?: (item: Item) => Promise<LightboxMediaSize | null>;
   /**
    * Largest zoom scale.
    * @default 4
@@ -135,7 +141,7 @@ export function LightboxRoot<Item = unknown>(
     defaultValue = null,
     onValueChange,
     handle,
-    loadImage = loadLightboxImage,
+    loadMedia = loadLightboxMedia,
     maxScale = LIGHTBOX_ZOOM_SCALE.max,
   } = props;
   const minScale = LIGHTBOX_ZOOM_SCALE.min;
@@ -159,8 +165,8 @@ export function LightboxRoot<Item = unknown>(
   const [flyingValue, setFlyingValue] =
     React.useState<LightboxItemValue | null>(null);
   const [controlsHidden, setControlsHidden] = React.useState(false);
-  const [imageSizes, setImageSizes] = React.useState<
-    ReadonlyMap<LightboxItemValue, LightboxImageSize>
+  const [mediaSizes, setMediaSizes] = React.useState<
+    ReadonlyMap<LightboxItemValue, LightboxMediaSize>
   >(() => new Map());
 
   const phaseRef = useValueAsRef(phase);
@@ -168,12 +174,14 @@ export function LightboxRoot<Item = unknown>(
   const triggersRef = React.useRef(
     new Map<LightboxItemValue, Set<HTMLElement>>(),
   );
-  const imagesRef = React.useRef(
-    new Map<LightboxItemValue, LightboxImageEntry>(),
+  const mediaRef = React.useRef(
+    new Map<LightboxItemValue, LightboxMediaEntry>(),
   );
-  const followersRef = React.useRef(
-    new Map<LightboxItemValue, Set<HTMLElement>>(),
-  );
+  // Rendered state, unlike `mediaRef`: `Lightbox.ZoomIn` is disabled on a
+  // media that can't zoom.
+  const [zoomableValues, setZoomableValues] = React.useState<
+    ReadonlySet<LightboxItemValue>
+  >(() => new Set());
   const popupRef = React.useRef<HTMLElement | null>(null);
   const backdropRef = React.useRef<HTMLElement | null>(null);
   const flightRef = React.useRef<Animation | null>(null);
@@ -200,25 +208,38 @@ export function LightboxRoot<Item = unknown>(
   const activeItem: unknown = items[index];
   const activeValue = values[index];
 
-  const getActiveImage = useStableCallback(() =>
-    activeValue === undefined ? undefined : imagesRef.current.get(activeValue),
+  const id = useId() ?? "lightbox";
+  const direction = useDirection();
+  // Which side the item shown came from: only while the viewer is open, so
+  // opening on an item doesn't count as a move.
+  const [directionIndex, setDirectionIndex] = React.useState(index);
+  const [activationDirection, setActivationDirection] = React.useState(
+    LightboxActivationDirection.None,
   );
+  if (index !== directionIndex) {
+    setDirectionIndex(index);
+    setActivationDirection(
+      open && phase !== LightboxPhase.Closed
+        ? getLightboxActivationDirection(index - directionIndex, direction)
+        : LightboxActivationDirection.None,
+    );
+  }
 
-  const getDismissFollowers = useStableCallback(
-    (): Iterable<HTMLElement> =>
-      (activeValue === undefined
-        ? undefined
-        : followersRef.current.get(activeValue)) ?? [],
+  const [thumbnailList, setThumbnailList] =
+    React.useState<LightboxThumbnailListEntry | null>(null);
+
+  const getActiveMedia = useStableCallback(() =>
+    activeValue === undefined ? undefined : mediaRef.current.get(activeValue),
   );
 
   const zoom = useLightboxZoom({
-    getActiveImage,
+    getActiveMedia,
     getDismissTargets: () => [popupRef.current, backdropRef.current],
-    getDismissFollowers,
     minScale,
     maxScale,
   });
   const zoomed = isLightboxZoomed(zoom.scale, minScale);
+  const zoomable = activeValue !== undefined && zoomableValues.has(activeValue);
 
   /** The item's trigger on the page, preferring the one that opened the viewer. */
   const findTrigger = useStableCallback((itemValue: LightboxItemValue) => {
@@ -245,9 +266,9 @@ export function LightboxRoot<Item = unknown>(
     },
   );
 
-  const setImageSize = useStableCallback(
-    (itemValue: LightboxItemValue, size: LightboxImageSize) => {
-      setImageSizes((sizes) => {
+  const setMediaSize = useStableCallback(
+    (itemValue: LightboxItemValue, size: LightboxMediaSize) => {
+      setMediaSizes((sizes) => {
         const current = sizes.get(itemValue);
         if (current?.width === size.width && current?.height === size.height)
           return sizes;
@@ -265,8 +286,8 @@ export function LightboxRoot<Item = unknown>(
 
       openerRef.current = trigger ?? findTrigger(nextValue);
       setPendingValue(nextValue);
-      const size = await loadImage(item as Item);
-      if (size) setImageSize(nextValue, size);
+      const size = await loadMedia(item as Item);
+      if (size) setMediaSize(nextValue, size);
       setPendingValue(null);
       setValue(nextValue);
     },
@@ -276,11 +297,12 @@ export function LightboxRoot<Item = unknown>(
     if (open) setValue(null);
   });
 
-  const getImageBox = (entry: LightboxImageEntry): LightboxRect => {
-    const itemRect = toLightboxRect(entry.itemElement);
+  /** Where the media sits at rest, without its zoom, drag or flight. */
+  const getMediaBox = (entry: LightboxMediaEntry): LightboxRect => {
+    const slideRect = toLightboxRect(entry.slideElement);
     return {
-      left: itemRect.left + entry.layout.left,
-      top: itemRect.top + entry.layout.top,
+      left: slideRect.left + entry.layout.left,
+      top: slideRect.top + entry.layout.top,
       width: entry.layout.width,
       height: entry.layout.height,
     };
@@ -324,40 +346,40 @@ export function LightboxRoot<Item = unknown>(
   });
 
   /**
-   * What flies for the active item: its image, or its `Lightbox.Fallback`
-   * when the image failed. `box` is where it sits at rest, and `transform`
-   * where it is now (zoomed, panned or dragged).
+   * What flies for the active item: its `Lightbox.Media` box, with whatever
+   * it shows (the image, a video, an error message). `box` is where it sits
+   * at rest, and `transform` where it is now. The flight takes the close
+   * drag (`translate` and `scale` on the box) and the zoom (`transform` on
+   * its `<img>`) over as one `transform` on the box, and they're cleared.
    */
   const getFlightTarget = (): {
     element: HTMLElement;
     box: LightboxRect;
     transform: string;
   } | null => {
-    const entry = getActiveImage();
-    if (entry) {
-      return {
-        element: entry.element,
-        box: getImageBox(entry),
-        transform: entry.element.style.transform || "none",
-      };
-    }
-    const [follower] = getDismissFollowers();
-    if (!follower) return null;
-    // Measured without the close drag, which the flight takes over as a
-    // `transform` (it moves with the individual `translate` and `scale`).
-    const { translate, scale } = follower.style;
-    follower.style.translate = "";
-    follower.style.scale = "";
+    const entry = getActiveMedia();
+    if (!entry) return null;
+    zoom.stop();
+    const { element, zoomElement } = entry;
+    const { translate, scale } = element.style;
+    const zoomTransform = zoomElement?.style.transform ?? "";
+    element.style.translate = "";
+    element.style.scale = "";
+    if (zoomElement) zoomElement.style.transform = "";
+    const dragTransform = translate
+      ? `translate(${translate.split(" ").join(", ")}) scale(${scale || 1})`
+      : "";
+    const transform = [dragTransform, zoomTransform]
+      .filter((part) => part !== "" && part !== "none")
+      .join(" ");
     return {
-      element: follower,
-      box: toLightboxRect(follower),
-      transform: translate
-        ? `translate(${translate.split(" ").join(", ")}) scale(${scale || 1})`
-        : "none",
+      element,
+      box: getMediaBox(entry),
+      transform: transform || "none",
     };
   };
 
-  /** Starts the open flight once the active image is laid out in the viewer. */
+  /** Starts the open flight once the active media is laid out in the viewer. */
   const tryStartOpenFlight = useStableCallback(() => {
     if (phaseRef.current !== LightboxPhase.Opening) return;
     if (openFlightStartedRef.current) return;
@@ -379,7 +401,7 @@ export function LightboxRoot<Item = unknown>(
         ]
       : [FADED_OUT, FADED_IN];
     if (target) setFlyingValue(activeValue);
-    flightRef.current = animateLightboxImage(
+    flightRef.current = animateLightboxMedia(
       flight.element,
       keyframes,
       finishOpening,
@@ -410,7 +432,7 @@ export function LightboxRoot<Item = unknown>(
           { ...FADED_OUT, transform: current },
         ];
     if (target) setFlyingValue(activeValue);
-    flightRef.current = animateLightboxImage(
+    flightRef.current = animateLightboxMedia(
       flight.element,
       keyframes,
       finishClosing,
@@ -430,6 +452,7 @@ export function LightboxRoot<Item = unknown>(
       zoom.reset();
       openFlightStartedRef.current = false;
       setControlsHidden(false);
+      setActivationDirection(LightboxActivationDirection.None);
       setPhase(LightboxPhase.Opening);
       openingTimeout.start(OPENING_FALLBACK_DELAY, finishOpening);
     } else if (
@@ -444,8 +467,15 @@ export function LightboxRoot<Item = unknown>(
   }, [open, phase]);
 
   useIsoLayoutEffect(() => {
-    if (phase === LightboxPhase.Opening) tryStartOpenFlight();
-  }, [phase, tryStartOpenFlight]);
+    if (phase !== LightboxPhase.Opening) return undefined;
+    tryStartOpenFlight();
+    // A `Lightbox.Media` registers before the next frame. Without one there
+    // is nothing to fly, and the viewer is open at once.
+    const frame = AnimationFrame.request(() => {
+      if (!openFlightStartedRef.current) finishOpening();
+    });
+    return () => AnimationFrame.cancel(frame);
+  }, [phase, tryStartOpenFlight, finishOpening]);
 
   // The open item was removed: show its neighbour, or close when none is left.
   React.useEffect(() => {
@@ -486,11 +516,11 @@ export function LightboxRoot<Item = unknown>(
   });
 
   const zoomTo = (scale: number) => {
-    const entry = getActiveImage();
-    if (!entry) return;
+    const entry = getActiveMedia();
+    if (!entry?.zoomElement) return;
     const center = {
-      x: entry.layout.itemWidth / 2,
-      y: entry.layout.itemHeight / 2,
+      x: entry.layout.slideWidth / 2,
+      y: entry.layout.slideHeight / 2,
     };
     zoom.animateZoom(
       zoomLightboxAroundPoint(
@@ -522,40 +552,31 @@ export function LightboxRoot<Item = unknown>(
     },
   );
 
-  const registerDismissFollower = useStableCallback(
-    (itemValue: LightboxItemValue, element: HTMLElement) => {
-      const followers = followersRef.current;
-      const elements = followers.get(itemValue) ?? new Set();
-      elements.add(element);
-      followers.set(itemValue, elements);
-      // The image failed while it flew in: the fallback that replaces it
-      // flies in instead.
-      if (
-        itemValue === activeValue &&
-        phaseRef.current === LightboxPhase.Opening &&
-        !imagesRef.current.has(itemValue)
-      ) {
-        flightRef.current?.cancel();
-        flightRef.current = null;
-        openFlightStartedRef.current = false;
-        tryStartOpenFlight();
-      }
-      return () => {
-        elements.delete(element);
-        if (!elements.size) followers.delete(itemValue);
-        element.style.translate = "";
-        element.style.scale = "";
-      };
+  const registerThumbnailList = useStableCallback(
+    (entry: LightboxThumbnailListEntry) => {
+      setThumbnailList(entry);
+      return () =>
+        setThumbnailList((current) => (current === entry ? null : current));
     },
   );
 
-  const registerImage = useStableCallback(
-    (itemValue: LightboxItemValue, entry: LightboxImageEntry) => {
-      imagesRef.current.set(itemValue, entry);
+  const registerMedia = useStableCallback(
+    (itemValue: LightboxItemValue, entry: LightboxMediaEntry) => {
+      mediaRef.current.set(itemValue, entry);
+      // Not cleared on unregister: the media re-registers on every layout
+      // change, and a removed one leaves `zoomTo` nothing to zoom anyway.
+      const canZoom = entry.zoomElement !== null;
+      setZoomableValues((current) => {
+        if (current.has(itemValue) === canZoom) return current;
+        const next = new Set(current);
+        if (canZoom) next.add(itemValue);
+        else next.delete(itemValue);
+        return next;
+      });
       if (itemValue === activeValue) tryStartOpenFlight();
       return () => {
-        if (imagesRef.current.get(itemValue) === entry)
-          imagesRef.current.delete(itemValue);
+        if (mediaRef.current.get(itemValue) === entry)
+          mediaRef.current.delete(itemValue);
       };
     },
   );
@@ -577,7 +598,10 @@ export function LightboxRoot<Item = unknown>(
       hasNext: index < items.length - 1,
       minScale,
       maxScale,
-      imageSizes,
+      mediaSizes,
+      activationDirection,
+      id,
+      thumbnailList,
       openValue,
       close,
       goTo,
@@ -598,11 +622,11 @@ export function LightboxRoot<Item = unknown>(
       },
       toggleControls: () => setControlsHidden((hidden) => !hidden),
       getFinalFocus,
-      setImageSize,
+      setMediaSize,
       registerTrigger,
-      registerImage,
-      registerDismissFollower,
-      getActiveImage,
+      registerMedia,
+      registerThumbnailList,
+      getActiveMedia,
       setPopupElement: (element) => {
         popupRef.current = element;
       },
@@ -634,7 +658,10 @@ export function LightboxRoot<Item = unknown>(
       controlsHidden,
       minScale,
       maxScale,
-      imageSizes,
+      mediaSizes,
+      activationDirection,
+      id,
+      thumbnailList,
     ],
   );
 
@@ -648,10 +675,10 @@ export function LightboxRoot<Item = unknown>(
   const zoomValue: LightboxRootZoomContextValue = React.useMemo(
     () => ({
       scale: zoom.scale,
-      canZoomIn: zoom.scale < maxScale,
+      canZoomIn: zoomable && zoom.scale < maxScale,
       canZoomOut: zoomed,
     }),
-    [zoom.scale, maxScale, zoomed],
+    [zoom.scale, maxScale, zoomed, zoomable],
   );
 
   return (

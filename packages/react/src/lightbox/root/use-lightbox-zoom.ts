@@ -14,17 +14,12 @@ import {
   LIGHTBOX_IDENTITY_ZOOM,
 } from "../utils/lightbox-geometry";
 import { tweenLightbox } from "../utils/lightbox-motion";
-import type { LightboxImageEntry } from "./lightbox-root-context";
+import type { LightboxMediaEntry } from "./lightbox-root-context";
 
 export interface UseLightboxZoomOptions {
-  getActiveImage: () => LightboxImageEntry | undefined;
+  getActiveMedia: () => LightboxMediaEntry | undefined;
   /** Elements that receive `--lightbox-dismiss-progress`. */
   getDismissTargets: () => (HTMLElement | null)[];
-  /**
-   * Elements of the active item that move with the close drag besides its
-   * image, such as `Lightbox.Fallback`: they get its offset and scale, not the zoom.
-   */
-  getDismissFollowers: () => Iterable<HTMLElement>;
   minScale: number;
   maxScale: number;
 }
@@ -42,6 +37,8 @@ export interface UseLightboxZoomResult {
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
   /** Puts the active image back at rest at once, without animation. */
   reset: () => void;
+  /** Stops the running zoom and close-drag animations where they are, writing nothing. */
+  stop: () => void;
 }
 
 function mix(from: number, to: number, progress: number): number {
@@ -49,20 +46,15 @@ function mix(from: number, to: number, progress: number): number {
 }
 
 /**
- * Zoom, pan and close-drag of the active image. The values live in refs and
- * are written to the image's `transform` directly, so a gesture frame only
- * re-renders the parts that show the scale.
+ * Zoom, pan and close-drag of the active media. The values live in refs and
+ * are written to the elements directly, so a gesture frame only re-renders
+ * the parts that show the scale: the zoom to the media's `<img>`, the close
+ * drag to the `Lightbox.Media` box, so all of its content moves with it.
  */
 export function useLightboxZoom(
   options: UseLightboxZoomOptions,
 ): UseLightboxZoomResult {
-  const {
-    getActiveImage,
-    getDismissTargets,
-    getDismissFollowers,
-    minScale,
-    maxScale,
-  } = options;
+  const { getActiveMedia, getDismissTargets, minScale, maxScale } = options;
 
   const [scale, setScale] = React.useState(minScale);
   const zoomRef = React.useRef(LIGHTBOX_IDENTITY_ZOOM);
@@ -73,20 +65,19 @@ export function useLightboxZoom(
   const stopDismissRef = React.useRef<(() => void) | null>(null);
 
   const write = useStableCallback(() => {
-    const entry = getActiveImage();
-    if (entry) {
-      entry.element.style.transform = formatLightboxTransform(
+    const entry = getActiveMedia();
+    if (entry?.zoomElement) {
+      entry.zoomElement.style.transform = formatLightboxTransform(
         zoomRef.current,
-        dismissRef.current,
       );
     }
-    // The individual `translate` and `scale` properties, so they add to
-    // whatever `transform` the app gives the element.
-    const { x, y, scale: dismissScale } = dismissRef.current;
-    const atRest = x === 0 && y === 0 && dismissScale === 1;
-    for (const follower of getDismissFollowers()) {
-      follower.style.translate = atRest ? "" : `${x}px ${y}px`;
-      follower.style.scale = atRest ? "" : String(dismissScale);
+    if (entry) {
+      // The individual `translate` and `scale` properties, so they add to
+      // the `transform` of a flight.
+      const { x, y, scale: dismissScale } = dismissRef.current;
+      const atRest = x === 0 && y === 0 && dismissScale === 1;
+      entry.element.style.translate = atRest ? "" : `${x}px ${y}px`;
+      entry.element.style.scale = atRest ? "" : String(dismissScale);
     }
     for (const target of getDismissTargets()) {
       target?.style.setProperty(
@@ -122,7 +113,7 @@ export function useLightboxZoom(
   const animateZoom = useStableCallback(
     (zoom: LightboxZoom, animateOptions?: { clamp?: boolean }) => {
       stopZoom();
-      const entry = getActiveImage();
+      const entry = getActiveMedia();
       const target =
         animateOptions?.clamp && entry
           ? clampLightboxZoom(zoom, entry.layout, minScale, maxScale)
@@ -188,6 +179,11 @@ export function useLightboxZoom(
     write();
   });
 
+  const stop = useStableCallback(() => {
+    stopZoom();
+    stopDismiss();
+  });
+
   return {
     scale,
     getZoom,
@@ -197,5 +193,6 @@ export function useLightboxZoom(
     setDismiss,
     animateDismiss,
     reset,
+    stop,
   };
 }

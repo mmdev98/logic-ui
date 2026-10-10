@@ -7,10 +7,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Lightbox } from "..";
-import { ITEMS, loadImage, openLightboxAt, TestLightbox } from "../test-utils";
+import { ITEMS, loadMedia, openLightboxAt, TestLightbox } from "../test-utils";
 
 afterEach(() => {
-  loadImage.mockClear();
+  loadMedia.mockClear();
 });
 
 describe("Lightbox.Trigger", () => {
@@ -28,16 +28,16 @@ describe("Lightbox.Trigger", () => {
 
     await openLightboxAt("Open image 2 of 3");
 
-    expect(loadImage).toHaveBeenCalledWith(ITEMS[1]);
+    expect(loadMedia).toHaveBeenCalledWith(ITEMS[1]);
 
     expect(onValueChange).toHaveBeenCalledWith("b");
-    expect(screen.getByTestId("value").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
     expect(screen.getByRole("img", { name: "Second" })).toBeTruthy();
   });
 
   it("exposes data-pending while the image loads, and disables the others", async () => {
     let resolve: (value: null) => void = () => {};
-    loadImage.mockImplementationOnce(
+    loadMedia.mockImplementationOnce(
       () => new Promise((done) => (resolve = done)),
     );
     render(<TestLightbox />);
@@ -97,7 +97,7 @@ describe("Lightbox.Trigger", () => {
   it("keeps the caller's handlers with the render prop", async () => {
     const onClick = vi.fn();
     render(
-      <Lightbox.Root items={ITEMS} loadImage={loadImage}>
+      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
         <Lightbox.Trigger value="a" render={<a href="#a" />} onClick={onClick}>
           Open
         </Lightbox.Trigger>

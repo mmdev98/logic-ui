@@ -1,4 +1,5 @@
 import { AnimationFrame } from "@base-ui/utils/useAnimationFrame";
+import { LightboxActivationDirection } from "../types";
 
 export interface LightboxSwipeRelease {
   /** Where the track is now, in px from the active item. */
@@ -72,4 +73,20 @@ export function tweenLightbox(
   };
   frame = AnimationFrame.request(step);
   return () => AnimationFrame.cancel(frame);
+}
+
+/**
+ * Side of the previous item the item shown came from, on screen, after the
+ * index moved by `step`: forward is to the right in a left-to-right layout.
+ */
+export function getLightboxActivationDirection(
+  step: number,
+  direction: "ltr" | "rtl",
+): LightboxActivationDirection {
+  if (step === 0) return LightboxActivationDirection.None;
+  const forward = step > 0;
+  const towardsRight = direction === "rtl" ? !forward : forward;
+  return towardsRight
+    ? LightboxActivationDirection.Right
+    : LightboxActivationDirection.Left;
 }

@@ -37,9 +37,6 @@ export const LIGHTBOX_DISMISS_VELOCITY = 0.5;
 export const LIGHTBOX_DOUBLE_TAP_DELAY = 300;
 export const LIGHTBOX_DOUBLE_TAP_DISTANCE = 30;
 
-/** CSS variable the app sets on `Lightbox.Viewport` for the space between items. */
-export const LIGHTBOX_ITEM_GAP_VARIABLE = "--lightbox-item-gap";
-
 /**
  * CSS variable set on `Lightbox.Popup` and `Lightbox.Backdrop` while the image
  * is dragged to close: 0 at rest, 1 at the closing distance.

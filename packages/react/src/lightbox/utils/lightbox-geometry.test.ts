@@ -1,21 +1,22 @@
 import { describe, expect, it } from "vitest";
-import type { LightboxImageLayout } from "../types";
+import type { LightboxMediaLayout } from "../types";
 import {
   clampLightboxZoom,
   getLightboxContainedSize,
   getLightboxPanBounds,
+  getLightboxRelativeRect,
   rubberbandLightboxOverflow,
   zoomLightboxAroundPoint,
 } from "./lightbox-geometry";
 
 /** A 400 × 300 image centred in an 800 × 600 item. */
-const LAYOUT: LightboxImageLayout = {
+const LAYOUT: LightboxMediaLayout = {
   left: 200,
   top: 150,
   width: 400,
   height: 300,
-  itemWidth: 800,
-  itemHeight: 600,
+  slideWidth: 800,
+  slideHeight: 600,
 };
 
 describe("getLightboxContainedSize", () => {
@@ -87,5 +88,17 @@ describe("rubberbandLightboxOverflow", () => {
     expect(moved).toBeGreaterThan(0);
     expect(moved).toBeLessThan(200);
     expect(rubberbandLightboxOverflow(-200, 400)).toBe(-moved);
+  });
+});
+
+describe("getLightboxRelativeRect", () => {
+  it("places a rect inside its container's border", () => {
+    expect(
+      getLightboxRelativeRect(
+        { left: 120, top: 80, width: 60, height: 40 },
+        { left: 100, top: 50, width: 500, height: 100 },
+        { left: 2, top: 2 },
+      ),
+    ).toEqual({ left: 18, top: 28, width: 60, height: 40 });
   });
 });

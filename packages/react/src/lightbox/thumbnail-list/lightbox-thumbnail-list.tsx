@@ -3,18 +3,19 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { ownerWindow } from "@base-ui/utils/owner";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import {
-  LightboxThumbnailsContext,
-  type LightboxThumbnailsContextValue,
-  LightboxThumbnailsItemContext,
-} from "./lightbox-thumbnails-context";
-import { useLightboxThumbnailsScroll } from "./use-lightbox-thumbnails-scroll";
+  LightboxThumbnailListContext,
+  type LightboxThumbnailListContextValue,
+  LightboxThumbnailListItemContext,
+} from "./lightbox-thumbnail-list-context";
+import { useLightboxThumbnailListScroll } from "./use-lightbox-thumbnail-list-scroll";
 
-export type LightboxThumbnailsState = {
+export type LightboxThumbnailListState = {
   /** Whether the thumbnails run left to right or top to bottom. */
   orientation: "horizontal" | "vertical";
   /** Whether thumbnails are scrolled out of view before the start. */
@@ -25,8 +26,8 @@ export type LightboxThumbnailsState = {
   dragging: boolean;
 };
 
-export interface LightboxThumbnailsProps extends Omit<
-  useRender.ComponentProps<"div", LightboxThumbnailsState>,
+export interface LightboxThumbnailListProps extends Omit<
+  useRender.ComponentProps<"div", LightboxThumbnailListState>,
   "children"
 > {
   /**
@@ -56,11 +57,12 @@ export interface LightboxThumbnailsProps extends Omit<
  * End go to the first and last. It scrolls itself: the active thumbnail
  * glides to its centre, the mouse can drag it, and the wheel scrolls a
  * horizontal strip. Make it scroll with `overflow: auto`, and hide its
- * scrollbar in CSS if you like. Follows the WAI-ARIA toolbar pattern.
+ * scrollbar in CSS if you like. Follows the WAI-ARIA tabbed carousel
+ * pattern: it is a tab list, and the slides are its tab panels.
  * Renders a `<div>` element.
  */
-export function LightboxThumbnails(
-  props: LightboxThumbnailsProps,
+export function LightboxThumbnailList(
+  props: LightboxThumbnailListProps,
 ): React.ReactElement {
   const {
     children,
@@ -71,7 +73,8 @@ export function LightboxThumbnails(
     ...elementProps
   } = props;
 
-  const { items, values, index, goTo } = useLightboxRootContext();
+  const { items, values, index, goTo, registerThumbnailList } =
+    useLightboxRootContext();
   const [focusIndex, setFocusIndex] = React.useState(index);
   const [shownIndex, setShownIndex] = React.useState(index);
   const thumbnailsRef = React.useRef(new Map<number, HTMLElement>());
@@ -86,12 +89,26 @@ export function LightboxThumbnails(
     thumbnailsRef.current.get(thumbnailIndex),
   );
 
-  const scroll = useLightboxThumbnailsScroll({
+  const scroll = useLightboxThumbnailListScroll({
     orientation,
     activeIndex: index,
     getThumbnail,
   });
-  const mergedRef = useMergedRefs(ref, scroll.ref);
+  const [listElement, setListElement] = React.useState<HTMLElement | null>(
+    null,
+  );
+  const handleListElement = React.useCallback(
+    (node: HTMLElement | null) => setListElement(node),
+    [],
+  );
+  const mergedRef = useMergedRefs(ref, scroll.ref, handleListElement);
+
+  // The slides become its tab panels, and `Lightbox.ThumbnailIndicator`
+  // measures its thumbnails.
+  useIsoLayoutEffect(() => {
+    if (!listElement) return undefined;
+    return registerThumbnailList({ element: listElement, getThumbnail });
+  }, [listElement, getThumbnail, registerThumbnailList]);
 
   const registerThumbnail = useStableCallback(
     (thumbnailIndex: number, element: HTMLElement) => {
@@ -135,12 +152,12 @@ export function LightboxThumbnails(
     },
   );
 
-  const contextValue: LightboxThumbnailsContextValue = React.useMemo(
+  const contextValue: LightboxThumbnailListContextValue = React.useMemo(
     () => ({ focusIndex, setFocusIndex, registerThumbnail }),
     [focusIndex, registerThumbnail],
   );
 
-  const state: LightboxThumbnailsState = React.useMemo(
+  const state: LightboxThumbnailListState = React.useMemo(
     () => ({
       orientation,
       overflowStart: scroll.overflowStart,
@@ -162,17 +179,17 @@ export function LightboxThumbnails(
     props: mergeProps<"div">(
       scroll.props,
       {
-        role: "toolbar",
+        role: "tablist",
         "aria-orientation": orientation,
         "aria-label": "Thumbnails",
         onKeyDown: handleKeyDown,
         children: items.map((item, itemIndex) => (
-          <LightboxThumbnailsItemContext
+          <LightboxThumbnailListItemContext
             key={values[itemIndex]}
             value={{ index: itemIndex }}
           >
             {children(item, itemIndex)}
-          </LightboxThumbnailsItemContext>
+          </LightboxThumbnailListItemContext>
         )),
       },
       elementProps,
@@ -180,8 +197,8 @@ export function LightboxThumbnails(
   });
 
   return (
-    <LightboxThumbnailsContext value={contextValue}>
+    <LightboxThumbnailListContext value={contextValue}>
       {element}
-    </LightboxThumbnailsContext>
+    </LightboxThumbnailListContext>
   );
 }
