@@ -7,6 +7,7 @@ export const activationDirection = "data-activation-direction";
 
 /**
  * Present for one frame when the item shown changes, with a function child:
- * style where the new content starts from, and a transition animates it in.
+ * style where the new content starts from, with transitions off
+ * (`data-starting-style:transition-none`), and a transition animates it in.
  */
 export const startingStyle = "data-starting-style";

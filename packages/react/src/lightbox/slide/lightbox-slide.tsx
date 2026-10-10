@@ -116,6 +116,9 @@ export function LightboxSlide(
         "aria-label": `${index + 1} of ${items.length}`,
         "aria-describedby": captionId,
         "aria-hidden": active ? undefined : true,
+        // Nothing in a slide that isn't shown takes focus: focusing it (the
+        // dialog's initial focus on a neighbour's video) would scroll it into view.
+        inert: !active,
         "aria-busy": state.loading || undefined,
         style: {
           position: "absolute",

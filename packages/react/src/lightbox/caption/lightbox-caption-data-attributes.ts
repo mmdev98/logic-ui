@@ -11,6 +11,7 @@ export const activationDirection = "data-activation-direction";
 
 /**
  * Present for one frame when its slide becomes the one shown: style where
- * the caption starts from, and a transition animates it in.
+ * the caption starts from, with transitions off
+ * (`data-starting-style:transition-none`), and a transition animates it in.
  */
 export const startingStyle = "data-starting-style";

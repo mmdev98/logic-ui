@@ -17,6 +17,9 @@ describe("Lightbox.Slide", () => {
     expect(first.hasAttribute("data-active")).toBe(true);
     expect(second.hasAttribute("data-active")).toBe(false);
     expect(second.getAttribute("aria-hidden")).toBe("true");
+    expect(first.hasAttribute("inert")).toBe(false);
+    // Nothing in it takes focus, such as the controls of a video.
+    expect(second.hasAttribute("inert")).toBe(true);
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Next image" }));

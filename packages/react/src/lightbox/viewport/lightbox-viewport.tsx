@@ -220,6 +220,13 @@ export function LightboxViewport(
           WebkitUserSelect: "none",
         },
         ...gestures,
+        // The track moves the slides, never a scroll: undo one, such as the
+        // browser revealing a focused element.
+        onScroll: (event) => {
+          const viewport = event.currentTarget;
+          viewport.scrollLeft = 0;
+          viewport.scrollTop = 0;
+        },
         children: (
           <div
             ref={trackRef}

@@ -52,7 +52,7 @@ export function LightboxThumbnailIndicator(
 ): React.ReactElement | null {
   const { render, ref, style, ...elementProps } = props;
 
-  const { index, activationDirection } = useLightboxRootContext();
+  const { items, index, activationDirection } = useLightboxRootContext();
   const { element: list, getThumbnail } = useLightboxThumbnailListContext();
   const [rect, setRect] = React.useState<LightboxRect | null>(null);
 
@@ -76,12 +76,18 @@ export function LightboxThumbnailIndicator(
 
   useIsoLayoutEffect(measure, [measure, index, list]);
 
+  // A thumbnail that changes size (a CSS transition that widens the active
+  // one) moves the active thumbnail's box: follow it frame by frame.
   useIsoLayoutEffect(() => {
     if (!list || typeof ResizeObserver === "undefined") return undefined;
     const observer = new ResizeObserver(measure);
     observer.observe(list);
+    for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
+      const thumbnail = getThumbnail(itemIndex);
+      if (thumbnail) observer.observe(thumbnail);
+    }
     return () => observer.disconnect();
-  }, [list, measure]);
+  }, [list, items, getThumbnail, measure]);
 
   const state: LightboxThumbnailIndicatorState = React.useMemo(
     () => ({ activationDirection }),

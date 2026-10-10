@@ -37,6 +37,18 @@ function getTrack() {
 }
 
 describe("Lightbox.Viewport", () => {
+  it("undoes a scroll, which would move the slides off their places", async () => {
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 1 of 3");
+    const viewport = screen.getByTestId("viewport");
+    viewport.scrollLeft = 400;
+    expect(viewport.scrollLeft).toBe(400);
+
+    fireEvent.scroll(viewport);
+
+    expect(viewport.scrollLeft).toBe(0);
+  });
+
   it("is a labelled carousel region", async () => {
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");

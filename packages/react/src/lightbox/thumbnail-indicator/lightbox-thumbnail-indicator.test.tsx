@@ -1,5 +1,13 @@
-import { render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 import { Lightbox } from "..";
 import {
   clickButton,
@@ -102,6 +110,45 @@ describe("Lightbox.ThumbnailIndicator", () => {
         .getByTestId("indicator")
         .style.getPropertyValue("--active-thumbnail-left"),
     ).toBe(`${THUMBNAIL_WIDTH + GAP + 50}px`);
+  });
+
+  it("measures again when a thumbnail changes size", async () => {
+    const observed: Element[] = [];
+    let notify = () => {};
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          notify = callback;
+        }
+        observe(element: Element) {
+          observed.push(element);
+        }
+        disconnect() {}
+      },
+    );
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    renderWithIndicator();
+    await openLightboxAt("Open image 1 of 3");
+    const first = screen.getByTestId("thumbnail-a");
+    const indicator = screen.getByTestId("indicator");
+    expect(observed).toContain(first);
+    expect(indicator.style.getPropertyValue("--active-thumbnail-width")).toBe(
+      `${THUMBNAIL_WIDTH}px`,
+    );
+
+    // A CSS transition widens the active thumbnail.
+    const rect = first.getBoundingClientRect();
+    vi.spyOn(first, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: rect.x, y: 0, width: 80, height: 40 }),
+    );
+    await act(async () => notify());
+
+    expect(indicator.style.getPropertyValue("--active-thumbnail-width")).toBe(
+      "80px",
+    );
   });
 
   it("throws outside Lightbox.ThumbnailList", () => {
