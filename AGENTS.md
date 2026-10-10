@@ -123,7 +123,7 @@ src/lightbox/
 │   ├── lightbox-popup.test.tsx
 │   ├── lightbox-popup-data-attributes.ts   its `data-*` attributes, documented
 │   └── lightbox-popup-css-vars.ts          the CSS variables it sets, documented
-├── trigger/ viewport/ item/ image/ …       one folder per part, same shape
+├── trigger/ viewport/ slide/ media/ …      one folder per part, same shape
 ├── utils/
 │   ├── lightbox-geometry.ts                pure helpers, grouped by topic
 │   └── lightbox-geometry.test.ts
@@ -167,8 +167,8 @@ one noun from the Base UI vocabulary, so the same word means the same role every
 | `Group`, `Separator`              | Grouping and dividers                                               |
 | `Preset`                          | Ready-made composition of the parts (our addition)                  |
 
-Add a domain noun only when no Base UI word fits (`Lightbox.Thumbnails`, `Lightbox.ZoomIn`,
-`Lightbox.Fallback`). A component with a single part stays a plain export (`ZoomPan`), with no namespace.
+Add a domain noun only when no Base UI word fits (`Lightbox.Slide`, `Lightbox.ZoomIn`,
+`Lightbox.Caption`). A component with a single part stays a plain export (`ZoomPan`), with no namespace.
 
 A `Preset` composes the parts for the common case so the caller writes one element instead of five.
 It stays headless like every part, and the parts remain the way to build anything it doesn't cover.
