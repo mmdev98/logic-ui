@@ -1,20 +1,20 @@
 export * as Lightbox from "./index.parts";
 
-export * as LightboxBackdropCssVars from "./backdrop/lightbox-backdrop-css-vars";
+export * as LightboxBackdropCssVariables from "./backdrop/lightbox-backdrop-css-vars";
 export * as LightboxBackdropDataAttributes from "./backdrop/lightbox-backdrop-data-attributes";
 export * as LightboxCaptionDataAttributes from "./caption/lightbox-caption-data-attributes";
 export * as LightboxCounterDataAttributes from "./counter/lightbox-counter-data-attributes";
 export * as LightboxDescriptionDataAttributes from "./description/lightbox-description-data-attributes";
 export * as LightboxMediaDataAttributes from "./media/lightbox-media-data-attributes";
 export * as LightboxNextDataAttributes from "./next/lightbox-next-data-attributes";
-export * as LightboxPopupCssVars from "./popup/lightbox-popup-css-vars";
+export * as LightboxPopupCssVariables from "./popup/lightbox-popup-css-vars";
 export * as LightboxPopupDataAttributes from "./popup/lightbox-popup-data-attributes";
 export * as LightboxPreviousDataAttributes from "./previous/lightbox-previous-data-attributes";
-export * as LightboxSlideCssVars from "./slide/lightbox-slide-css-vars";
+export * as LightboxSlideCssVariables from "./slide/lightbox-slide-css-vars";
 export * as LightboxSlideDataAttributes from "./slide/lightbox-slide-data-attributes";
 export * as LightboxThumbnailDataAttributes from "./thumbnail/lightbox-thumbnail-data-attributes";
-export * as LightboxThumbnailIndicatorCssVars from "./thumbnail-indicator/lightbox-thumbnail-indicator-css-vars";
-export * as LightboxViewportCssVars from "./viewport/lightbox-viewport-css-vars";
+export * as LightboxThumbnailIndicatorCssVariables from "./thumbnail-indicator/lightbox-thumbnail-indicator-css-vars";
+export * as LightboxViewportCssVariables from "./viewport/lightbox-viewport-css-vars";
 export * as LightboxThumbnailIndicatorDataAttributes from "./thumbnail-indicator/lightbox-thumbnail-indicator-data-attributes";
 export * as LightboxThumbnailListDataAttributes from "./thumbnail-list/lightbox-thumbnail-list-data-attributes";
 export * as LightboxTitleDataAttributes from "./title/lightbox-title-data-attributes";
