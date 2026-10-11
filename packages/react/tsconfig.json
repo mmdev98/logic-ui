@@ -1,4 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": true
+  },
   "include": ["src", "test", "vitest.config.ts", "tsdown.config.ts"]
 }
