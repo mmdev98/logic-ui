@@ -61,6 +61,25 @@ const INTERACTIVE = [
   "audio[controls]",
 ].join(",");
 
+/**
+ * Base UI's attribute for content that handles its own drags (drawers,
+ * toasts): with no value the viewer leaves its presses alone, with `"x"` or
+ * `"y"` only its drags along that axis.
+ */
+const SWIPE_IGNORE_ATTRIBUTE = "data-base-ui-swipe-ignore";
+
+/** What a press keeps to its content: everything, one axis, or nothing. */
+function getLightboxSwipeIgnore(
+  event: React.PointerEvent<HTMLElement>,
+): "all" | "x" | "y" | null {
+  const target = event.target as Partial<Element>;
+  if (typeof target.closest !== "function") return null;
+  const element = target.closest(`[${SWIPE_IGNORE_ATTRIBUTE}]`);
+  if (!element || !event.currentTarget.contains(element)) return null;
+  const value = element.getAttribute(SWIPE_IGNORE_ATTRIBUTE);
+  return value === "x" || value === "y" ? value : "all";
+}
+
 function isOnLightboxControl(event: React.PointerEvent<HTMLElement>): boolean {
   // Not `instanceof Element`: it fails for elements of another window (iframes).
   const target = event.target as Partial<Element>;
@@ -95,6 +114,8 @@ type GestureState = {
   pinchDistance: number;
   pinchCenter: Point;
   lastTap: Sample | null;
+  /** The axis whose drags the pressed content keeps (`data-base-ui-swipe-ignore`). */
+  ignoreAxis: "x" | "y" | null;
 };
 
 export interface UseLightboxGesturesOptions {
@@ -178,6 +199,7 @@ export function useLightboxGestures(
     pinchDistance: 0,
     pinchCenter: { x: 0, y: 0 },
     lastTap: null,
+    ignoreAxis: null,
   });
 
   const minScale = root.minScale;
@@ -323,6 +345,8 @@ export function useLightboxGestures(
       if (root.phase !== "open") return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
       if (isOnLightboxControl(event)) return;
+      const ignore = getLightboxSwipeIgnore(event);
+      if (ignore === "all") return;
       const state = stateRef.current;
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -334,6 +358,7 @@ export function useLightboxGestures(
 
       if (state.pointers.size === 1) {
         state.mode = GestureMode.Press;
+        state.ignoreAxis = ignore;
         state.pointerType = event.pointerType;
         state.start = { ...point, time: event.timeStamp };
         state.samples = [state.start];
@@ -406,6 +431,20 @@ export function useLightboxGestures(
           state.mode = GestureMode.Swipe;
         } else {
           state.mode = GestureMode.Dismiss;
+        }
+        // The pressed content keeps drags along this axis: let it have them.
+        if (
+          (state.mode === GestureMode.Swipe && state.ignoreAxis === "x") ||
+          (state.mode === GestureMode.Dismiss && state.ignoreAxis === "y")
+        ) {
+          state.mode = GestureMode.Idle;
+          state.pointers.clear();
+          try {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          } catch {
+            // Already released.
+          }
+          return;
         }
         setSwiping(true);
       }

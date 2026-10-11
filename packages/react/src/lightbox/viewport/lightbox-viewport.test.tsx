@@ -132,6 +132,51 @@ describe("Lightbox.Viewport", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    { name: "all drags", value: "", swipes: false, pulls: false },
+    { name: "horizontal drags with x", value: "x", swipes: false, pulls: true },
+    { name: "vertical drags with y", value: "y", swipes: true, pulls: false },
+  ])(
+    "leaves $name to content with data-base-ui-swipe-ignore",
+    async ({ value, swipes, pulls }) => {
+      render(
+        <TestLightbox
+          itemChildren={(item) => (
+            <div
+              data-testid={`model-${item.id}`}
+              data-base-ui-swipe-ignore={value}
+            />
+          )}
+        />,
+      );
+      await openLightboxAt("Open image 1 of 3");
+      const model = screen.getByTestId("model-a");
+      const popup = screen.getByTestId("popup");
+
+      // A sideways drag on the content.
+      await act(async () => {
+        firePointer("pointerDown", model, 300, 200);
+        firePointer("pointerMove", model, 250, 202);
+        firePointer("pointerMove", model, 200, 204);
+      });
+      expect(getTrack().style.transform !== "translate3d(0px, 0px, 0px)").toBe(
+        swipes,
+      );
+      await act(async () => {
+        firePointer("pointerUp", model, 200, 204);
+      });
+      await wait(500);
+
+      // A downward drag on the content.
+      await act(async () => {
+        firePointer("pointerDown", model, 300, 100);
+        firePointer("pointerMove", model, 302, 150);
+        firePointer("pointerMove", model, 304, 200);
+      });
+      expect(popup.hasAttribute("data-swiping")).toBe(pulls);
+    },
+  );
+
   it("gives each slide its distance from the centre, following the swipe", async () => {
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");

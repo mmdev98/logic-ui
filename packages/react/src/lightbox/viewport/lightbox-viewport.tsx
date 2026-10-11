@@ -75,7 +75,10 @@ const INITIAL_METRICS: LightboxViewportContextValue = {
  * the screen, clip them with `overflow: hidden`; leave it off for a pulled
  * card or a 3D transition to leave the viewport.
  * A press that starts on a control inside a slide (a button, a link, a
- * player) is left to that control. It has `data-swiping` while a finger or
+ * player) is left to that control, and so is one on content marked with
+ * Base UI's `data-base-ui-swipe-ignore`, such as a 3D model that rotates
+ * with a drag: with no value, all its drags; with `"x"` or `"y"`, only
+ * those along that axis. It has `data-swiping` while a finger or
  * the mouse drags, and `data-activation-direction` after the item shown
  * changes.
  * Renders a `<div>` element.

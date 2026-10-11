@@ -65,6 +65,9 @@ breaking change is listed under its release.
   changes, to animate the new text in. `Title` takes a function child, like `Description`.
 - `Popup`'s `className`, `style` and `render` functions receive `zoomed`, `controlsHidden` and
   `activationDirection`. `Viewport` is a labelled carousel region.
+- Content marked with Base UI's `data-base-ui-swipe-ignore` keeps its drags, such as a 3D model
+  that rotates: the viewer doesn't swipe or pull to dismiss from it. `"x"` or `"y"` keeps only the
+  drags along that axis.
 - The arrow keys stay with a widget inside the popup that uses them itself, such as a Base UI
   toolbar, a text field or a video player, instead of also changing the image.
 - **Where the image lands.** `closeTarget` on `Root` picks the trigger the image flies back to
