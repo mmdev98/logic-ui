@@ -128,7 +128,8 @@ src/lightbox/
 │   ├── lightbox-geometry.ts                pure helpers, grouped by topic
 │   └── lightbox-geometry.test.ts
 ├── constants.ts                            LIGHTBOX_ZOOM_SCALE …
-├── types.ts                                value types and unions shared by the parts
+├── lightbox-reasons.ts                     change reasons, imported as `* as REASONS`
+├── types.ts                                value types shared by the parts
 ├── use-lightbox-action.tsx                 hooks shared by several parts
 ├── test-utils.tsx                          test helpers shared by the part tests
 ├── index.parts.ts                          parts under their short names
@@ -188,6 +189,10 @@ It stays headless like every part, and the parts remain the way to build anythin
 - **Explicit return types** on every exported function, component and hook
   (`: React.ReactElement`, `: React.ReactElement | null`, `: ClipboardRootContextValue`). The public
   `.d.ts` files depend on them, and JSR rejects inferred public types.
+- **Optional properties take `| undefined`**, like Base UI: `maxScale?: number | undefined`,
+  `onOpenChangeComplete?: ((open: boolean) => void) | undefined` (a function type in parentheses).
+  Apps that turn on `exactOptionalPropertyTypes` can then pass `undefined`. The package's tsconfig
+  turns it on, so our own code is checked the same way. The API tables hide the `| undefined`.
 - Write a JSDoc comment on every part (what it does, which element it renders) and every prop. Put
   defaults in `@default`.
 
@@ -286,11 +291,24 @@ throw new Error(
 
 - Fixed module-level values are `SCREAMING_SNAKE_CASE` with the component prefix
   (`CLIPBOARD_DEFAULT_TIMEOUT`) in `constants.ts`, and they are exported.
-- Type a closed set of values as a string union, never a TS `enum`: `type LightboxCloseTarget = "active" | "opener" | "nearest"`.
+- Type a closed set of values as a string union, never a TS `enum`, like Base UI (which has none).
   Callers write the plain string (`closeTarget="opener"`) without importing anything. This holds for
-  props, state, callback arguments (`eventDetails.reason`) and context values. Document every value
-  as a list item in the type's JSDoc, or in the prop's JSDoc for an inline union (``- `"opener"`: …``):
-  the API table lists each value of the prop with its note. Internal sets that never leave a file may stay an `enum`.
+  props, state, callback arguments (`eventDetails.reason`) and context values. Internal sets that
+  never leave a file may stay an `enum`.
+- Name the union `<Component><Part><Name>` after the part that owns it, and declare it in that part's
+  file, next to its props, like Base UI's `TabsRootOrientation` in `TabsRoot.tsx`:
+  `export type LightboxRootCloseTarget = "active" | "opener" | "nearest"` in `root/lightbox-root.tsx`.
+  Give even an inline prop union a name (`orientation?: LightboxThumbnailListOrientation`). `types.ts`
+  only holds value types shared by several parts (`LightboxItemValue`, `LightboxRect`).
+- Document every value as a list item in the type's JSDoc (``- `"opener"`: …``): the API table lists
+  each value of the prop with its note.
+- Change reasons follow Base UI's `reason-parts.ts`: one `as const` string per reason in
+  `<component>-reasons.ts` (`export const swipe = "swipe" as const`), imported as
+  `import * as REASONS from "../lightbox-reasons"`, with Base UI's string where it has one
+  (`"escape-key"`). Code writes `REASONS.swipe`, never the raw string. The part's reason type is a
+  union of their types, `LightboxRootChangeEventReason = typeof REASONS.triggerPress | …`, and its
+  details are `BaseUIChangeEventDetails<LightboxRootChangeEventReason>`. The reasons module isn't
+  exported; apps compare `eventDetails.reason` with the plain string.
 
 ## Tests
 
