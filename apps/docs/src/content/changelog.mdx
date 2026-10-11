@@ -1,10 +1,17 @@
 The package follows semver. Until `1.0.0`, a minor version (`0.x.0`) may break the API; each
 breaking change is listed under its release.
 
-## Unreleased
+## v0.2.0
+
+October 12, 2026.
 
 ### Breaking changes
 
+- **Built on `@base-ui/react` 1.9.0** (was 1.8.0) and `@base-ui/utils` 0.5.0. Select,
+  Combobox and Autocomplete unmount on close whether or not `actionsRef` is set; call
+  `eventDetails.preventUnmountOnClose()` in `onOpenChange` to keep them mounted.
+  `onItemHighlighted` receives the originating event. See the
+  [Base UI 1.9.0 release notes](https://base-ui.com/react/overview/releases/v1-9-0).
 - **`Gallery` is now [Lightbox](/docs/components/lightbox)**, at `@logic-ui/react/lightbox`.
   Every part, type, hook and constant is renamed (`GalleryRoot` → `LightboxRoot`,
   `GALLERY_ZOOM_SCALE` → `LIGHTBOX_ZOOM_SCALE`), and the CSS variable
@@ -54,6 +61,9 @@ breaking change is listed under its release.
   like. `LightboxPhase` is now `LightboxRootPhase`, and `LightboxActivationDirection` is
   `LightboxRootActivationDirection`. `ThumbnailList`'s `orientation` is typed
   `LightboxThumbnailListOrientation`.
+- **The CSS variable namespaces end in `CssVariables`**, like Base UI's:
+  `LightboxPopupCssVariables` instead of `LightboxPopupCssVars`, and the same for `Backdrop`,
+  `Slide`, `ThumbnailIndicator` and `Viewport`.
 
 ### New features
 
@@ -110,6 +120,14 @@ breaking change is listed under its release.
 - Changing `value` while the viewer is open slides to the new item, as Next does.
 - `Popup` takes focus when it opens, so its keys work at once; pass `initialFocus` to focus
   another element.
+- Optional props accept `undefined`, for apps with `exactOptionalPropertyTypes`.
+
+### From Base UI 1.9.0
+
+- Every component exports its `data-*` attributes and CSS variables as namespaces, such as
+  `DialogPopupDataAttributes` and `DialogPopupCssVariables`.
+- `Menu` can filter its items with `Menu.FilterProvider` and `Menu.Input` (preview).
+- `data-base-ui-swipe-ignore` takes `"x"` or `"y"` in Drawer too.
 
 ## v0.1.0
 
