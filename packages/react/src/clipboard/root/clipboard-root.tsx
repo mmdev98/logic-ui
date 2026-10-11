@@ -25,11 +25,11 @@ export interface ClipboardRootProps extends useRender.ComponentProps<
    * Time in milliseconds before `copied` goes back to `false`.
    * @default 2000
    */
-  timeout?: number;
+  timeout?: number | undefined;
   /** Called when `copied` changes. */
-  onCopiedChange?: (copied: boolean) => void;
+  onCopiedChange?: ((copied: boolean) => void) | undefined;
   /** Called when the browser refuses to write to the clipboard. */
-  onCopyError?: (error: unknown) => void;
+  onCopyError?: ((error: unknown) => void) | undefined;
 }
 
 /**

@@ -18,7 +18,7 @@ export interface ClipboardIndicatorProps extends useRender.ComponentProps<
    * Style it with `data-copied`.
    * @default false
    */
-  keepMounted?: boolean;
+  keepMounted?: boolean | undefined;
 }
 
 /**
