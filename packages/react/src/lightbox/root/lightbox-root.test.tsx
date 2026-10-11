@@ -20,6 +20,7 @@ import {
   loadMedia,
   openLightboxAt,
   TestLightbox,
+  type TestItem,
   waitForFrames,
 } from "../test-utils";
 
@@ -757,6 +758,125 @@ describe("Lightbox.Root closeTarget", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(document.activeElement).toBe(second);
+  });
+});
+
+describe("Lightbox.Root with a portal that stays mounted", () => {
+  it("opens and closes with a portal that stays mounted", async () => {
+    render(
+      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+        <Lightbox.Trigger value="a" />
+        <Lightbox.Portal keepMounted>
+          <Lightbox.Popup data-testid="popup">
+            <Lightbox.Viewport>
+              {(item: TestItem) => (
+                <Lightbox.Slide>
+                  <Lightbox.Media>
+                    <img src={item.src} alt={item.alt} />
+                  </Lightbox.Media>
+                </Lightbox.Slide>
+              )}
+            </Lightbox.Viewport>
+            <Lightbox.Close>Close</Lightbox.Close>
+          </Lightbox.Popup>
+        </Lightbox.Portal>
+      </Lightbox.Root>,
+    );
+    const popup = screen.getByTestId("popup");
+    const image = popup.querySelector("img");
+    expect(image?.getAttribute("alt")).toBe("First");
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Open image 1 of 3" }),
+      );
+    });
+    await screen.findByRole("dialog");
+    expect(screen.getByTestId("popup")).toBe(popup);
+    expect(popup.querySelector("img")).toBe(image);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByTestId("popup", { hidden: true } as never)).toBe(popup);
+  });
+});
+
+describe("Lightbox.Root opening a viewer kept mounted while closed", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("flies the media from its trigger, not from where it was measured hidden", async () => {
+    // Hidden, everything is zero; shown, the slide is 400 × 300. The trigger
+    // is a 100 px square.
+    const hidden = (element: Element) => element.closest("[hidden]") !== null;
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return hidden(this) ? 0 : 400;
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return hidden(this) ? 0 : 300;
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        if (this.tagName === "BUTTON")
+          return DOMRect.fromRect({ x: 10, y: 10, width: 100, height: 100 });
+        const size = hidden(this) ? 0 : 1;
+        return DOMRect.fromRect({
+          x: 0,
+          y: 0,
+          width: 400 * size,
+          height: 300 * size,
+        });
+      },
+    );
+    const animate = vi.fn(
+      (keyframes: Keyframe[]) =>
+        ({
+          keyframes,
+          finished: new Promise(() => {}),
+          cancel: () => {},
+        }) as unknown as Animation,
+    );
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value: animate,
+    });
+    onTestFinished(() => {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
+    });
+    render(
+      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+        <Lightbox.Trigger value="a" />
+        <Lightbox.Portal keepMounted>
+          <Lightbox.Popup>
+            <Lightbox.Viewport>
+              {(item: TestItem) => (
+                <Lightbox.Slide>
+                  <Lightbox.Media>
+                    <img src={item.src} alt={item.alt} />
+                  </Lightbox.Media>
+                </Lightbox.Slide>
+              )}
+            </Lightbox.Viewport>
+          </Lightbox.Popup>
+        </Lightbox.Portal>
+      </Lightbox.Root>,
+    );
+
+    await openLightboxAt("Open image 1 of 3");
+    // It waits for the popup to be shown, then measured.
+    await waitFor(() => expect(animate).toHaveBeenCalled());
+
+    // The flight starts on the trigger: scaled down to it, not at full size.
+    const [keyframes] = animate.mock.calls[0] ?? [];
+    const scale = Number(
+      /scale\(([\d.]+)\)/.exec(String(keyframes?.[0]?.transform))?.[1],
+    );
+    expect(scale).toBeLessThan(1);
   });
 });
 

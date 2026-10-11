@@ -83,6 +83,22 @@ import { useLightboxZoom } from "./use-lightbox-zoom";
 /** Longest the viewer waits for its image before it counts as open (ms). */
 const OPENING_FALLBACK_DELAY = LIGHTBOX_FLIGHT_DURATION + 1000;
 
+/** Whether the media is in a popup still hidden: kept mounted while closed. */
+function isLightboxMediaHidden(entry: LightboxMediaEntry): boolean {
+  return entry.slideElement.closest("[hidden]") !== null;
+}
+
+/**
+ * Whether a media was measured while hidden: at zero size, though its slide
+ * is laid out now.
+ */
+function isLightboxMediaStale(entry: LightboxMediaEntry): boolean {
+  return (
+    (entry.layout.width <= 0 || entry.layout.height <= 0) &&
+    entry.slideElement.clientWidth > 0
+  );
+}
+
 /** The flight's curve when nothing throws the image: `LIGHTBOX_FLIGHT_EASING`. */
 const FLIGHT_EASING = parseLightboxCubicBezier(LIGHTBOX_FLIGHT_EASING);
 
@@ -756,6 +772,14 @@ export function LightboxRoot<Item = unknown>(
     if (activeValue === undefined) return;
     const entry = getActiveMedia();
     if (!entry) return;
+    // A popup kept mounted while closed is shown a moment after it opens: wait
+    // for it (the opening effect tries again each frame), then for the media
+    // to measure its real box. It registers again, which starts the flight.
+    if (isLightboxMediaHidden(entry)) return;
+    if (isLightboxMediaStale(entry)) {
+      entry.measure();
+      return;
+    }
     openFlightStartedRef.current = true;
     const box = getMediaBox(entry);
     const interrupted = interruptedRef.current?.element === entry.element;
@@ -859,10 +883,23 @@ export function LightboxRoot<Item = unknown>(
     if (phase !== "opening") return undefined;
     tryStartOpenFlight();
     // A `Lightbox.Media` registers before the next frame. Without one there
-    // is nothing to fly, and the viewer is open at once.
-    const frame = AnimationFrame.request(() => {
-      if (!openFlightStartedRef.current) finishOpening();
-    });
+    // is nothing to fly, and the viewer is open at once. One that is there
+    // but not shown or laid out yet is tried again each frame until it is.
+    let frame = 0;
+    const check = () => {
+      if (openFlightStartedRef.current) return;
+      const entry = getActiveMedia();
+      if (
+        entry &&
+        (isLightboxMediaHidden(entry) || isLightboxMediaStale(entry))
+      ) {
+        tryStartOpenFlight();
+        frame = AnimationFrame.request(check);
+        return;
+      }
+      finishOpening();
+    };
+    frame = AnimationFrame.request(check);
     return () => AnimationFrame.cancel(frame);
   }, [phase, tryStartOpenFlight, finishOpening]);
 

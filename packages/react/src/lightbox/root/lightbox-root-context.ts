@@ -31,6 +31,8 @@ export type LightboxMediaEntry = {
   zoomElement: HTMLElement | null;
   slideElement: HTMLElement;
   layout: LightboxMediaLayout;
+  /** Measures the media again; it registers again with its new layout. */
+  measure: () => void;
 };
 
 /**

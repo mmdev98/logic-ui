@@ -235,8 +235,9 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
       zoomElement,
       slideElement,
       layout,
+      measure,
     });
-  }, [layout, box, slideElement, value, zoomElement, registerMedia]);
+  }, [layout, box, slideElement, value, zoomElement, registerMedia, measure]);
 
   const state: LightboxMediaState = React.useMemo(
     () => ({
