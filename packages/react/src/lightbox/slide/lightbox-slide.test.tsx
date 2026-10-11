@@ -2,7 +2,12 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DirectionProvider } from "@base-ui/react/direction-provider";
 import { Lightbox } from "..";
-import { ITEMS, openLightboxAt, TestLightbox } from "../test-utils";
+import {
+  ITEMS,
+  openLightboxAt,
+  pressTrigger,
+  TestLightbox,
+} from "../test-utils";
 
 describe("Lightbox.Slide", () => {
   it("doesn't clip, so the app chooses what to clip", () => {
@@ -57,7 +62,7 @@ describe("Lightbox.Slide", () => {
 
   it("exposes data-loading, then data-error when its image fails", async () => {
     render(<TestLightbox />);
-    await openLightboxAt("Open image 1 of 3");
+    await pressTrigger("Open image 1 of 3");
     const item = screen.getByTestId("slide-a");
     expect(item.hasAttribute("data-loading")).toBe(true);
     expect(item.getAttribute("aria-busy")).toBe("true");

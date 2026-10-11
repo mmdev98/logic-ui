@@ -5,13 +5,9 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Lightbox } from "..";
-import { ITEMS, loadMedia, openLightboxAt, TestLightbox } from "../test-utils";
-
-afterEach(() => {
-  loadMedia.mockClear();
-});
+import { ITEMS, loadImages, openLightboxAt, TestLightbox } from "../test-utils";
 
 describe("Lightbox.Trigger", () => {
   it("renders a labelled button per item that does not submit forms", () => {
@@ -21,48 +17,61 @@ describe("Lightbox.Trigger", () => {
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 
-  it("loads the image, then opens the viewer on its item", async () => {
+  it("shows its item, then opens the viewer on it", async () => {
     const onValueChange = vi.fn();
-    render(<TestLightbox onValueChange={onValueChange} />);
+    const onOpenChange = vi.fn();
+    render(
+      <TestLightbox
+        onValueChange={onValueChange}
+        onOpenChange={onOpenChange}
+      />,
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
     const trigger = screen.getByRole("button", { name: "Open image 2 of 3" });
 
     await openLightboxAt("Open image 2 of 3");
 
-    expect(loadMedia).toHaveBeenCalledWith(ITEMS[1]);
-
     expect(onValueChange).toHaveBeenCalledWith(
       "b",
-      expect.objectContaining({
-        reason: "trigger-press",
-        trigger,
-      }),
+      expect.objectContaining({ reason: "trigger-press", trigger }),
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(
+      true,
+      expect.objectContaining({ reason: "trigger-press", trigger }),
     );
     expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
     expect(screen.getByRole("img", { name: "Second" })).toBeTruthy();
   });
 
+  it("doesn't call onValueChange when it opens the item already shown", async () => {
+    const onValueChange = vi.fn();
+    render(<TestLightbox onValueChange={onValueChange} />);
+
+    await openLightboxAt("Open image 1 of 3");
+
+    expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
   it("exposes data-pending while the image loads, and disables the others", async () => {
-    let resolve: (value: null) => void = () => {};
-    loadMedia.mockImplementationOnce(
-      () => new Promise((done) => (resolve = done)),
-    );
     render(<TestLightbox />);
     const trigger = screen.getByRole("button", { name: "Open image 1 of 3" });
     const other = screen.getByRole("button", { name: "Open image 2 of 3" });
     expect(trigger.hasAttribute("data-pending")).toBe(false);
 
-    fireEvent.click(trigger);
+    await act(async () => {
+      fireEvent.click(trigger);
+    });
 
-    await waitFor(() =>
-      expect(trigger.hasAttribute("data-pending")).toBe(true),
-    );
+    expect(trigger.hasAttribute("data-pending")).toBe(true);
     expect(trigger.getAttribute("aria-busy")).toBe("true");
     expect(other.hasAttribute("data-disabled")).toBe(true);
+    // Mounted out of sight meanwhile.
+    expect(screen.getByTestId("popup").style.opacity).toBe("0");
 
-    await act(async () => resolve(null));
-    await screen.findByRole("dialog");
+    await loadImages();
     expect(trigger.hasAttribute("data-pending")).toBe(false);
+    expect(screen.getByTestId("popup").style.opacity).toBe("");
   });
 
   it("marks the trigger of the image the viewer shows with data-popup-open", async () => {
@@ -104,7 +113,7 @@ describe("Lightbox.Trigger", () => {
   it("keeps the caller's handlers with the render prop", async () => {
     const onClick = vi.fn();
     render(
-      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+      <Lightbox.Root items={ITEMS}>
         <Lightbox.Trigger value="a" render={<a href="#a" />} onClick={onClick}>
           Open
         </Lightbox.Trigger>

@@ -21,12 +21,15 @@ export function LightboxBackdrop(
 ): React.ReactElement {
   const { ref, ...elementProps } = props;
 
-  const { phase, setBackdropElement } = useLightboxRootContext();
+  const { phase, preparing, setBackdropElement } = useLightboxRootContext();
   const mergedRef = useMergedRefs(ref, setBackdropElement);
 
   return (
     <Dialog.Backdrop
       ref={mergedRef}
+      // Held at its starting style while the media loads, so it fades in with
+      // the open flight, not before.
+      data-starting-style={preparing ? "" : undefined}
       // The dialog stays open while the image flies back; fade out meanwhile.
       data-ending-style={phase === "closing" ? "" : undefined}
       {...elementProps}

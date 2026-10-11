@@ -1,14 +1,8 @@
 "use client";
 import * as React from "react";
-import { Lightbox, loadLightboxMedia } from "@logic-ui/react/lightbox";
+import { Lightbox } from "@logic-ui/react/lightbox";
 import { Toolbar } from "@logic-ui/react/toolbar";
-import {
-  getThumbnailSrc,
-  loadVideoSize,
-  type MediaItem,
-  photos,
-  videos,
-} from "./_photos";
+import { getThumbnailSrc, type MediaItem, photos, videos } from "./_photos";
 import {
   ChevronIcon,
   CloseIcon,
@@ -78,13 +72,6 @@ const items: MediaItem[] = [
 const TILES = 5;
 const hiddenCount = items.length - TILES;
 
-/** Preloads an image, or reads a video's size, before the viewer opens. */
-function loadMedia(item: MediaItem) {
-  return item.type === "video"
-    ? loadVideoSize(item.src)
-    : loadLightboxMedia(item);
-}
-
 const shortcuts = [
   ["← →", "Previous / next"],
   ["+ −", "Zoom"],
@@ -124,7 +111,7 @@ export default function ExampleLightbox() {
   return (
     // The items without a tile fly back into the "+5" tile, the nearest
     // one, and dissolve into it.
-    <Lightbox.Root items={items} loadMedia={loadMedia} closeTarget="nearest">
+    <Lightbox.Root items={items} closeTarget="nearest">
       <div className={local.Layout}>
         {items.slice(0, TILES).map((item, index) => {
           const isLast = index === TILES - 1;

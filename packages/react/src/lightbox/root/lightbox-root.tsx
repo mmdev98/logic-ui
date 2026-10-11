@@ -14,9 +14,11 @@ import type { BaseUIChangeEventDetails } from "@base-ui/react/types";
 import * as React from "react";
 import * as REASONS from "../lightbox-reasons";
 import {
+  LIGHTBOX_CLOSE_TIMEOUT,
   LIGHTBOX_CROSSFADE_WINDOW,
   LIGHTBOX_FLIGHT_DURATION,
   LIGHTBOX_FLIGHT_EASING,
+  LIGHTBOX_OPEN_TIMEOUT,
   LIGHTBOX_ZOOM_SCALE,
 } from "../constants";
 import {
@@ -45,6 +47,7 @@ import {
   prefersLightboxReducedMotion,
 } from "../utils/lightbox-flight";
 import {
+  LIGHTBOX_IDENTITY_DISMISS,
   getLightboxVisibleArea,
   isLightboxRectVisible,
   isLightboxZoomed,
@@ -55,7 +58,6 @@ import {
   clampLightboxIndex,
   getLightboxItemValue,
   getLightboxNearestIndex,
-  loadLightboxMedia,
 } from "../utils/lightbox-items";
 import type { LightboxHandle } from "./lightbox-handle";
 import {
@@ -122,6 +124,28 @@ function animateLightboxMedia(
   return animation;
 }
 
+/**
+ * An open or close the viewer waits on: for the Promise `onOpenChange`
+ * returned, and before it opens, for its media to load.
+ */
+type LightboxOpenChange = {
+  open: boolean;
+  /** `null` when the app changed controlled `open` itself. */
+  eventDetails: LightboxRootChangeEventDetails | null;
+  /** Whether the Promise `onOpenChange` returned has settled. */
+  settled: boolean;
+  /** Frames since the popup mounted, to tell that no `Lightbox.Media` will register. */
+  frames: number;
+};
+
+function isLightboxPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as PromiseLike<unknown>).then === "function"
+  );
+}
+
 /** A running flight: enough to tell where the media is at any moment. */
 type LightboxFlight = {
   element: HTMLElement;
@@ -162,9 +186,10 @@ export type LightboxRootPhase = "closed" | "opening" | "open" | "closing";
 export type LightboxRootActivationDirection = "left" | "right" | "none";
 
 /**
- * Why the item open in the viewer changed, in `onValueChange`. The values
- * are Base UI's where it has one (`escape-key`, `close-press`), so a
- * reason compares with the same string as in a Base UI dialog.
+ * Why the viewer opened or closed, in `onOpenChange`, or showed another
+ * item, in `onValueChange`. The values are Base UI's where it has one
+ * (`escape-key`, `close-press`), so a reason compares with the same string
+ * as in a Base UI dialog.
  *
  * - `"trigger-press"`: A `Lightbox.Trigger` was pressed.
  * - `"swipe"`: A swipe to the next or previous item, or a pull to dismiss.
@@ -198,9 +223,9 @@ export type LightboxRootChangeEventReason =
   | typeof REASONS.none;
 
 /**
- * Details of a change of the open item: its `reason`, the native `event`,
- * and the element it came from (`trigger`). Call `cancel()` to keep the
- * current item; a cancelled swipe or pull to dismiss springs back.
+ * Details of a change: its `reason`, the native `event`, and the element it
+ * came from (`trigger`). Call `cancel()` to stop it; a cancelled swipe or
+ * pull to dismiss springs back.
  */
 export type LightboxRootChangeEventDetails =
   BaseUIChangeEventDetails<LightboxRootChangeEventReason>;
@@ -215,29 +240,57 @@ export interface LightboxRootProps<Item = unknown> {
    */
   itemToValue?: ((item: Item) => LightboxItemValue) | undefined;
   children?: React.ReactNode | undefined;
-  /** Value of the item open in the viewer, or `null` while it is closed. */
-  value?: LightboxItemValue | null | undefined;
+  /** Whether the viewer is open. */
+  open?: boolean | undefined;
   /**
-   * Value of the item open at first, when `value` is not controlled.
-   * @default null
+   * Whether the viewer is open at first, when `open` is not controlled.
+   * @default false
    */
-  defaultValue?: LightboxItemValue | null | undefined;
+  defaultOpen?: boolean | undefined;
   /**
-   * Called when the viewer opens, closes or shows another item, with why
-   * (`eventDetails.reason`). Call `eventDetails.cancel()` to keep the
-   * current item: a cancelled swipe or pull to dismiss springs back.
+   * Called when the viewer is about to open or close, with why
+   * (`eventDetails.reason`). Call `eventDetails.cancel()` to keep it as it
+   * is: a cancelled pull to dismiss springs back.
+   *
+   * Return a Promise to make the viewer wait for it: up to
+   * `LIGHTBOX_OPEN_TIMEOUT` (3 s) before it opens, `LIGHTBOX_CLOSE_TIMEOUT`
+   * (300 ms) before it closes; it goes on after that. `cancel()` works until
+   * the wait ends, after an `await` too. A rejected Promise is logged, and the
+   * viewer goes on.
    */
-  onValueChange?:
+  onOpenChange?:
     | ((
-        value: LightboxItemValue | null,
+        open: boolean,
         eventDetails: LightboxRootChangeEventDetails,
-      ) => void)
+      ) => void | Promise<void>)
     | undefined;
   /**
    * Called when the viewer has finished opening or closing: the image has
    * landed in the viewer, or back on the page.
    */
   onOpenChangeComplete?: ((open: boolean) => void) | undefined;
+  /**
+   * Value of the item shown in the viewer. It stays on the last item shown
+   * after the viewer closes.
+   */
+  value?: LightboxItemValue | undefined;
+  /**
+   * Value of the item shown at first, when `value` is not controlled.
+   * @default the first item's value
+   */
+  defaultValue?: LightboxItemValue | undefined;
+  /**
+   * Called when the viewer is about to show another item, with why
+   * (`eventDetails.reason`), and before it opens on an item that isn't the
+   * one shown. Call `eventDetails.cancel()` to keep the current item: a
+   * cancelled swipe springs back.
+   */
+  onValueChange?:
+    | ((
+        value: LightboxItemValue,
+        eventDetails: LightboxRootChangeEventDetails,
+      ) => void)
+    | undefined;
   /**
    * Where the image flies back to when the viewer closes, and where focus
    * returns. When that trigger shows another image, the image turns into it
@@ -258,15 +311,6 @@ export interface LightboxRootProps<Item = unknown> {
    */
   handle?: LightboxHandle | undefined;
   /**
-   * Loads an item's media before the viewer opens, so it shows at once and
-   * flies from its trigger at the right size. Resolves with its natural
-   * size, or `null`. The default loads the item's `src` as an image, when it
-   * has one; pass your own when `Lightbox.Media` shows another URL, such as a
-   * resized image, or a video.
-   * @default loadLightboxMedia
-   */
-  loadMedia?: ((item: Item) => Promise<LightboxMediaSize | null>) | undefined;
-  /**
    * Largest zoom scale.
    * @default 4
    */
@@ -274,9 +318,12 @@ export interface LightboxRootProps<Item = unknown> {
 }
 
 /**
- * Holds the lightbox state: the items, the open item, the viewer's
- * animation, and the zoom of the active image. Place the viewer parts inside
- * it, and the triggers inside it or anywhere else with a `handle`.
+ * Holds the lightbox state: the items, the item shown, whether the viewer is
+ * open, its animation, and the zoom of the active image. Place the viewer
+ * parts inside it, and the triggers inside it or anywhere else with a
+ * `handle`. Before the viewer opens, it is mounted out of sight until its
+ * `Lightbox.Media` has loaded, so the image flies from its trigger at the
+ * right size; the trigger has `data-pending` meanwhile.
  * Renders no element.
  */
 export function LightboxRoot<Item = unknown>(
@@ -286,34 +333,45 @@ export function LightboxRoot<Item = unknown>(
     items,
     itemToValue = getLightboxItemValue,
     children,
-    value: valueProp,
-    defaultValue = null,
-    onValueChange,
+    open: openProp,
+    defaultOpen = false,
+    onOpenChange,
     onOpenChangeComplete,
+    value: valueProp,
+    defaultValue,
+    onValueChange,
     closeTarget = "active",
     scrollToTrigger = true,
     handle,
-    loadMedia = loadLightboxMedia,
     maxScale = LIGHTBOX_ZOOM_SCALE.max,
   } = props;
   const minScale = LIGHTBOX_ZOOM_SCALE.min;
 
+  const [open, setOpenState] = useControlled({
+    controlled: openProp,
+    default: defaultOpen,
+    name: "Lightbox",
+    state: "open",
+  });
+  const openControlled = openProp !== undefined;
+  // `open` once its change has waited: what the viewer shows.
+  const [shownOpen, setShownOpen] = React.useState(false);
+  // The open state a change waits to reach, or `null`.
+  const [waitingOpen, setWaitingOpen] = React.useState<boolean | null>(null);
+  const openChangeRef = React.useRef<LightboxOpenChange | null>(null);
+  const openChangeFrameRef = React.useRef(0);
+  const openChangeTimeout = useTimeout();
+
   const [value, setValueState] = useControlled<LightboxItemValue | null>({
     controlled: valueProp,
-    default: defaultValue,
+    default: defaultValue ?? null,
     name: "Lightbox",
     state: "value",
   });
-  const open = value !== null;
-
-  // The viewer keeps showing the last item while it closes.
-  const [lastValue, setLastValue] = React.useState(value);
-  if (value !== null && value !== lastValue) setLastValue(value);
-  const shownValue = value ?? lastValue;
 
   const [phase, setPhase] = React.useState<LightboxRootPhase>("closed");
-  const [pendingValue, setPendingValue] =
-    React.useState<LightboxItemValue | null>(null);
+  // Mounted out of sight while its media loads, before it opens.
+  const preparing = waitingOpen === true && phase === "closed";
   // The trigger the image flies back to, kept empty while the viewer is open.
   const [landingTrigger, setLandingTrigger] =
     React.useState<HTMLElement | null>(null);
@@ -368,7 +426,8 @@ export function LightboxRoot<Item = unknown>(
 
   // When the open item is removed, the viewer stays where it was and moves
   // to the neighbour (see the effect below).
-  const foundIndex = shownValue === null ? -1 : values.indexOf(shownValue);
+  // No value yet: the first item.
+  const foundIndex = value === null ? -1 : values.indexOf(value);
   const [lastIndex, setLastIndex] = React.useState(0);
   if (foundIndex !== -1 && foundIndex !== lastIndex) setLastIndex(foundIndex);
   const index =
@@ -388,7 +447,7 @@ export function LightboxRoot<Item = unknown>(
   if (index !== directionIndex) {
     setDirectionIndex(index);
     setActivationDirection(
-      open && phase !== "closed"
+      shownOpen && phase !== "closed"
         ? getLightboxActivationDirection(index - directionIndex, direction)
         : "none",
     );
@@ -460,10 +519,10 @@ export function LightboxRoot<Item = unknown>(
    */
   const setValue = useStableCallback(
     (
-      nextValue: LightboxItemValue | null,
+      nextValue: LightboxItemValue,
       eventDetails: LightboxRootChangeEventDetails,
     ): boolean => {
-      if (nextValue === value) return false;
+      if (nextValue === (value ?? activeValue)) return false;
       onValueChange?.(nextValue, eventDetails);
       if (eventDetails.isCanceled) return false;
       setValueState(nextValue);
@@ -497,25 +556,141 @@ export function LightboxRoot<Item = unknown>(
     },
   );
 
+  /** Whether the viewer can open now: its media has loaded, or it has none. */
+  const isMediaReady = (change: LightboxOpenChange): boolean => {
+    const entry = getActiveMedia();
+    // Without a `Lightbox.Media` there is nothing to load.
+    if (!entry) return change.frames >= 2;
+    // A popup kept mounted while closed is shown a moment after it opens.
+    if (isLightboxMediaHidden(entry)) return false;
+    if (isLightboxMediaStale(entry)) {
+      entry.measure();
+      return false;
+    }
+    return entry.ready;
+  };
+
+  /**
+   * Ends the wait: the change happens, unless the app cancelled it, in
+   * which case it never happened.
+   */
+  const finishOpenChange = useStableCallback((change: LightboxOpenChange) => {
+    if (openChangeRef.current !== change) return;
+    openChangeRef.current = null;
+    openChangeTimeout.clear();
+    AnimationFrame.cancel(openChangeFrameRef.current);
+    setWaitingOpen(null);
+    if (change.eventDetails?.isCanceled) {
+      // A pull to dismiss the app cancelled springs back.
+      if (!change.open) {
+        releaseVelocityRef.current = null;
+        zoom.animateDismiss(LIGHTBOX_IDENTITY_DISMISS);
+      }
+      return;
+    }
+    setOpenState(change.open);
+    // Controlled: the viewer follows the prop, once the app has set it.
+    if (!openControlled || change.eventDetails === null)
+      setShownOpen(change.open);
+  });
+
+  const checkOpenChange = useStableCallback((change: LightboxOpenChange) => {
+    if (openChangeRef.current !== change) return;
+    if (
+      change.eventDetails?.isCanceled ||
+      (change.settled && (!change.open || isMediaReady(change)))
+    )
+      finishOpenChange(change);
+  });
+
+  /**
+   * Waits for `result`, the Promise `onOpenChange` returned, and before an
+   * open for the media, up to a time limit, then makes the change. Replaces
+   * a change still waiting.
+   */
+  const startOpenChange = useStableCallback(
+    (
+      nextOpen: boolean,
+      eventDetails: LightboxRootChangeEventDetails | null,
+      result: unknown,
+    ) => {
+      const isPromise = isLightboxPromiseLike(result);
+      const change: LightboxOpenChange = {
+        open: nextOpen,
+        eventDetails,
+        settled: !isPromise,
+        frames: 0,
+      };
+      openChangeRef.current = change;
+      AnimationFrame.cancel(openChangeFrameRef.current);
+      setWaitingOpen(nextOpen);
+      if (isPromise) {
+        const settle = () => {
+          change.settled = true;
+          checkOpenChange(change);
+        };
+        result.then(settle, (error: unknown) => {
+          console.error(error);
+          settle();
+        });
+      }
+      // Goes on after the limit, whatever the Promise or the media do.
+      openChangeTimeout.start(
+        nextOpen ? LIGHTBOX_OPEN_TIMEOUT : LIGHTBOX_CLOSE_TIMEOUT,
+        () => finishOpenChange(change),
+      );
+      // Each frame: has it loaded, or did the app cancel after an `await`?
+      const tick = () => {
+        if (openChangeRef.current !== change) return;
+        if (popupRef.current) change.frames += 1;
+        checkOpenChange(change);
+        if (openChangeRef.current === change)
+          openChangeFrameRef.current = AnimationFrame.request(tick);
+      };
+      openChangeFrameRef.current = AnimationFrame.request(tick);
+      checkOpenChange(change);
+    },
+  );
+
+  /**
+   * Asks the app with `onOpenChange`, then opens or closes the viewer once
+   * it is ready, unless the app cancelled. Returns whether the change goes
+   * ahead, as far as is known now.
+   */
+  const requestOpenChange = useStableCallback(
+    (nextOpen: boolean, eventDetails: LightboxRootChangeEventDetails) => {
+      const heading = openChangeRef.current?.open ?? shownOpen;
+      if (nextOpen === heading) return false;
+      const result = onOpenChange?.(nextOpen, eventDetails);
+      if (eventDetails.isCanceled) return false;
+      startOpenChange(nextOpen, eventDetails, result);
+      return true;
+    },
+  );
+
   const openValue = useStableCallback(
-    async (
+    (
       nextValue: LightboxItemValue,
       eventDetails: LightboxRootChangeEventDetails,
     ) => {
-      const nextIndex = values.indexOf(nextValue);
-      const item = items[nextIndex];
-      if (nextIndex === -1 || open || pendingValue !== null) return;
-      if (phaseRef.current !== "closed") return;
-
+      if (!values.includes(nextValue)) return;
+      if ((openChangeRef.current?.open ?? shownOpen) === true) return;
       const trigger = eventDetails.trigger;
       openerRef.current =
         trigger instanceof HTMLElement ? trigger : findTrigger(nextValue);
       openerValueRef.current = nextValue;
-      setPendingValue(nextValue);
-      const size = await loadMedia(item as Item);
-      if (size) setMediaSize(nextValue, size);
-      setPendingValue(null);
-      setValue(nextValue, eventDetails);
+      if (nextValue !== (value ?? activeValue)) {
+        setValue(nextValue, eventDetails);
+        if (eventDetails.isCanceled) return;
+      }
+      requestOpenChange(
+        true,
+        createLightboxChangeEventDetails(
+          eventDetails.reason,
+          eventDetails.event,
+          eventDetails.trigger,
+        ),
+      );
     },
   );
 
@@ -524,9 +699,10 @@ export function LightboxRoot<Item = unknown>(
       eventDetails: LightboxRootChangeEventDetails,
       velocity?: { x: number; y: number },
     ): boolean => {
-      if (!open || !setValue(null, eventDetails)) return false;
       releaseVelocityRef.current = velocity ?? null;
-      return true;
+      const closing = requestOpenChange(false, eventDetails);
+      if (!closing) releaseVelocityRef.current = null;
+      return closing;
     },
   );
 
@@ -843,10 +1019,22 @@ export function LightboxRoot<Item = unknown>(
       flyStandIn(trigger.element, from, to, easing, false);
   };
 
-  // Turns `open` into the animation phases. Runs before paint, so the close
-  // flight measures the image where the user last saw it.
+  // Controlled `open` the app changed itself: the viewer follows it, once
+  // the media has loaded.
   useIsoLayoutEffect(() => {
-    if (open && (phase === "closed" || phase === "closing")) {
+    if (openChangeRef.current || open === shownOpen) return;
+    startOpenChange(open, null, undefined);
+  }, [open, shownOpen, waitingOpen, startOpenChange]);
+
+  React.useEffect(
+    () => () => AnimationFrame.cancel(openChangeFrameRef.current),
+    [],
+  );
+
+  // Turns `shownOpen` into the animation phases. Runs before paint, so the
+  // close flight measures the image where the user last saw it.
+  useIsoLayoutEffect(() => {
+    if (shownOpen && (phase === "closed" || phase === "closing")) {
       stopFlight();
       zoom.reset();
       openFlightStartedRef.current = false;
@@ -854,13 +1042,13 @@ export function LightboxRoot<Item = unknown>(
       setActivationDirection("none");
       setPhase("opening");
       openingTimeout.start(OPENING_FALLBACK_DELAY, finishOpening);
-    } else if (!open && (phase === "open" || phase === "opening")) {
+    } else if (!shownOpen && (phase === "open" || phase === "opening")) {
       stopFlight();
       openingTimeout.clear();
       setPhase("closing");
       startCloseFlight();
     }
-  }, [open, phase]);
+  }, [shownOpen, phase]);
 
   // Where the image will land follows the item shown, from the opening
   // flight to the end of the closing one. Before paint, so the slot never
@@ -906,19 +1094,20 @@ export function LightboxRoot<Item = unknown>(
   // As the items change, the page behind the viewer scrolls to keep the
   // trigger to fly back to in view, so it's on screen when the viewer closes.
   useIsoLayoutEffect(() => {
-    if (!open || phase !== "open") return;
+    if (!shownOpen || phase !== "open") return;
     const trigger = findCloseTrigger();
     if (trigger) revealTrigger(trigger.element);
     // When the item shown changes, or the viewer has just opened.
-  }, [open, phase, activeValue]);
+  }, [shownOpen, phase, activeValue]);
 
   // The open item was removed: show its neighbour, or close when none is left.
   React.useEffect(() => {
-    if (!open || foundIndex !== -1) return;
+    if (!shownOpen) return;
     const eventDetails = createLightboxChangeEventDetails(REASONS.missing);
     if (activeValue === undefined) close(eventDetails);
-    else setValue(activeValue, eventDetails);
-  }, [open, foundIndex, activeValue, close, setValue]);
+    else if (value !== null && foundIndex === -1)
+      setValue(activeValue, eventDetails);
+  }, [shownOpen, value, foundIndex, activeValue, close, setValue]);
 
   const goTo = useStableCallback(
     (
@@ -1056,7 +1245,11 @@ export function LightboxRoot<Item = unknown>(
         else next.delete(itemValue);
         return next;
       });
-      if (itemValue === activeValue) tryStartOpenFlight();
+      if (itemValue === activeValue) {
+        tryStartOpenFlight();
+        // Loaded: the viewer waiting on it can open.
+        if (openChangeRef.current) checkOpenChange(openChangeRef.current);
+      }
       return () => {
         if (mediaRef.current.get(itemValue) === entry)
           mediaRef.current.delete(itemValue);
@@ -1071,9 +1264,10 @@ export function LightboxRoot<Item = unknown>(
       index,
       activeItem,
       activeValue,
-      open,
+      open: shownOpen,
       phase,
-      pendingValue,
+      preparing,
+      pendingValue: preparing ? (activeValue ?? null) : null,
       flyingTrigger,
       landingTrigger,
       zoomed,
@@ -1132,9 +1326,9 @@ export function LightboxRoot<Item = unknown>(
       index,
       activeItem,
       activeValue,
-      open,
+      shownOpen,
       phase,
-      pendingValue,
+      preparing,
       flyingTrigger,
       landingTrigger,
       zoomed,
@@ -1168,11 +1362,12 @@ export function LightboxRoot<Item = unknown>(
     <LightboxRootContext value={contextValue}>
       <LightboxRootZoomContext value={zoomValue}>
         <Dialog.Root
-          // Stays open until the image has flown back, then lets Base UI
-          // unmount it. Not `phase === Closing`: in the render where `value`
-          // becomes `null` the phase is still `Open`, and the dialog would
-          // close and reopen around the close flight.
-          open={open || phase !== "closed"}
+          // Mounted out of sight while the media loads, and open until the
+          // image has flown back, then Base UI unmounts it. Not `phase ===
+          // "closing"`: in the render where `shownOpen` becomes `false` the
+          // phase is still `"open"`, and the dialog would close and reopen
+          // around the close flight.
+          open={shownOpen || phase !== "closed" || waitingOpen === true}
           onOpenChange={(nextOpen, eventDetails) => {
             if (nextOpen) return;
             // Escape, an outside press or `Lightbox.Close`, with Base UI's reason.

@@ -15,9 +15,9 @@ export class LightboxHandle {
 
   readonly #listeners = new Set<() => void>();
 
-  /** Opens the lightbox on the item with this value. */
+  /** Shows the item with this value, then opens the lightbox on it. */
   open(value: LightboxItemValue): void {
-    void this.#root?.openValue(
+    this.#root?.openValue(
       value,
       createLightboxChangeEventDetails(REASONS.imperativeAction),
     );

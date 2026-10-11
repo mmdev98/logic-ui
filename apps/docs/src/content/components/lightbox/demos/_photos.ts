@@ -110,17 +110,3 @@ export const videos: MediaItem[] = [
     caption: "Big Buck Bunny",
   },
 ];
-
-/** Reads a video's size from its metadata, so it flies in with the right shape. */
-export function loadVideoSize(
-  src: string,
-): Promise<{ width: number; height: number } | null> {
-  return new Promise((resolve) => {
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = () =>
-      resolve({ width: video.videoWidth, height: video.videoHeight });
-    video.onerror = () => resolve(null);
-    video.src = src;
-  });
-}

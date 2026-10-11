@@ -6,6 +6,7 @@ import {
   type DialogPopupState,
 } from "@base-ui/react/dialog";
 import { ownerWindow } from "@base-ui/utils/owner";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import * as React from "react";
 import { LIGHTBOX_KEYBOARD_PAN_STEP } from "../constants";
@@ -97,6 +98,7 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
   const {
     items,
     phase,
+    preparing,
     zoomed,
     controlsHidden,
     activationDirection,
@@ -112,6 +114,17 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
   } = useLightboxRootContext();
   const popupRef = React.useRef<HTMLDivElement | null>(null);
   const mergedRef = useMergedRefs(ref, popupRef, setPopupElement);
+
+  // Out of sight while the media loads, before the viewer opens. Written to
+  // the element: it's the app's, and the CSS can't override it.
+  useIsoLayoutEffect(() => {
+    const popup = popupRef.current;
+    if (!popup) return undefined;
+    popup.style.opacity = preparing ? "0" : "";
+    return () => {
+      popup.style.opacity = "";
+    };
+  }, [preparing]);
 
   const extra = React.useMemo(
     () => ({ zoomed, controlsHidden, activationDirection }),
@@ -174,6 +187,8 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
       finalFocus={() => getFinalFocus() ?? true}
       data-zoomed={zoomed ? "" : undefined}
       data-controls-hidden={controlsHidden ? "" : undefined}
+      // Where it starts from while the media loads; the open flight follows.
+      data-starting-style={preparing ? "" : undefined}
       // The dialog stays open while the image flies back.
       data-ending-style={phase === "closing" ? "" : undefined}
       {...getLightboxStateAttributes(extra)}

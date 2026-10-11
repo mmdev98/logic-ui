@@ -102,6 +102,10 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
   const [mediaElement, setMediaElement] = React.useState<HTMLElement | null>(
     null,
   );
+  // The box its media was looked for in: until then, its status is unknown.
+  const [searchedBox, setSearchedBox] = React.useState<HTMLElement | null>(
+    null,
+  );
   const handleBox = React.useCallback(
     (node: HTMLElement | null) => setBox(node),
     [],
@@ -156,7 +160,10 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
   // Finds the media among the children, and again when they change.
   useIsoLayoutEffect(() => {
     if (!box) return undefined;
-    const update = () => setMediaElement(findLightboxMediaElement(box));
+    const update = () => {
+      setMediaElement(findLightboxMediaElement(box));
+      setSearchedBox(box);
+    };
     update();
     if (typeof MutationObserver === "undefined") return undefined;
     const observer = new MutationObserver(update);
@@ -168,7 +175,7 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
   // from the media's events. They don't bubble, so the box listens in the
   // capture phase. A new `src` loads again.
   useIsoLayoutEffect(() => {
-    if (!box) return undefined;
+    if (!box || searchedBox !== box) return undefined;
     const readStatus = () => {
       const next = getLightboxMediaStatus(mediaElement);
       setStatus(next);
@@ -206,7 +213,7 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
       observer?.disconnect();
       setStatus("idle");
     };
-  }, [box, mediaElement, value, setStatus, setMediaSize]);
+  }, [box, searchedBox, mediaElement, value, setStatus, setMediaSize]);
 
   // The media fills the box. Written to it directly: it's the app's element.
   useIsoLayoutEffect(
@@ -228,6 +235,11 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
       ? mediaElement
       : null;
 
+  // The viewer opens once the media has loaded, failed, or knows its size (a
+  // video, before it can play).
+  const ready =
+    status === "loaded" || status === "error" || mediaSizes.has(value);
+
   useIsoLayoutEffect(() => {
     if (!layout || !box || !slideElement) return undefined;
     return registerMedia(value, {
@@ -236,8 +248,18 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
       slideElement,
       layout,
       measure,
+      ready,
     });
-  }, [layout, box, slideElement, value, zoomElement, registerMedia, measure]);
+  }, [
+    layout,
+    box,
+    slideElement,
+    value,
+    zoomElement,
+    ready,
+    registerMedia,
+    measure,
+  ]);
 
   const state: LightboxMediaState = React.useMemo(
     () => ({

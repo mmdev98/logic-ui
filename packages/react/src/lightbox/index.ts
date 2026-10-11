@@ -26,7 +26,8 @@ export * as LightboxZoomResetDataAttributes from "./zoom-reset/lightbox-zoom-res
 
 export {
   LIGHTBOX_DISMISS_PROGRESS_VARIABLE,
-  LIGHTBOX_PRELOAD_TIMEOUT,
+  LIGHTBOX_OPEN_TIMEOUT,
+  LIGHTBOX_CLOSE_TIMEOUT,
   LIGHTBOX_ZOOM_SCALE,
 } from "./constants";
 export {
@@ -153,4 +154,3 @@ export {
 } from "./zoom-value/lightbox-zoom-value";
 export type { LightboxTransitionStatus } from "./lightbox-state-attributes";
 export type { LightboxItemValue, LightboxMediaSize } from "./types";
-export { loadLightboxMedia } from "./utils/lightbox-items";

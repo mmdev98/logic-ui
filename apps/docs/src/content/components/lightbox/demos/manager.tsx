@@ -29,8 +29,10 @@ const local = {
 
 export default function ExampleLightboxManager() {
   const [items, setItems] = React.useState<Photo[]>(() => photos.slice(0, 5));
-  // The open photo's id, or `null` while the viewer is closed.
-  const [value, setValue] = React.useState<LightboxItemValue | null>(null);
+  // Whether the viewer is open, and the photo it shows: what an app keeps in
+  // the URL.
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState<LightboxItemValue>(photos[0].id);
 
   const nextPhoto = photos.find(
     (photo) => !items.some((item) => item.id === photo.id),
@@ -51,7 +53,7 @@ export default function ExampleLightboxManager() {
           <span />
         </div>
         <output className={local.Address}>
-          /album{value !== null && <b>?photo={value}</b>}
+          /album{open && <b>?photo={value}</b>}
         </output>
       </div>
 
@@ -70,7 +72,13 @@ export default function ExampleLightboxManager() {
           </button>
         </div>
 
-        <Lightbox.Root items={items} value={value} onValueChange={setValue}>
+        <Lightbox.Root
+          items={items}
+          open={open}
+          onOpenChange={setOpen}
+          value={value}
+          onValueChange={setValue}
+        >
           {items.length === 0 ? (
             <p className={local.Empty}>No photos. Add one to start.</p>
           ) : (

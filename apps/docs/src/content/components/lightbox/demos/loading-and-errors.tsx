@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Avatar } from "@logic-ui/react/avatar";
-import { Lightbox, loadLightboxMedia } from "@logic-ui/react/lightbox";
+import { Lightbox, type LightboxItemValue } from "@logic-ui/react/lightbox";
 import { BROKEN_SRC, getThumbnailSrc, photos, type Photo } from "./_photos";
 import { BrokenImageIcon, CloseIcon } from "./_icons";
 import { classes } from "./_classes";
@@ -13,7 +13,7 @@ const local = {
   Item: "flex flex-col gap-1.5",
   Tile: "aspect-square rounded-xl",
   Label: "m-0 text-center text-xs text-neutral-500",
-  // On the trigger while its image loads before the viewer opens.
+  // On the trigger while the viewer waits before it opens.
   Pending:
     "absolute inset-0 m-auto hidden size-6 animate-spin rounded-full border-2 border-white/30 border-t-white group-data-pending:block",
   BrokenTile:
@@ -60,14 +60,11 @@ function getSrc(photo: DemoPhoto, attempts: number) {
   return photo.src;
 }
 
-/** Preloads before the viewer opens; the slow photo waits 1.5 s, as on a slow network. */
-async function loadMedia(photo: DemoPhoto) {
-  if (photo.network === "slow") {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1500);
-    });
-  }
-  return loadLightboxMedia({ src: getSrc(photo, 0) });
+/** Waits as long as a slow network would. */
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 export default function ExampleLightboxLoadingAndErrors() {
@@ -76,8 +73,24 @@ export default function ExampleLightboxLoadingAndErrors() {
   const retry = (id: string) =>
     setAttempts((current) => ({ ...current, [id]: (current[id] ?? 0) + 1 }));
 
+  // The photo the viewer opens on, to know when it is the slow one. A ref:
+  // a trigger press reports it just before `onOpenChange`.
+  const valueRef = React.useRef<LightboxItemValue>(items[0].id);
+
   return (
-    <Lightbox.Root items={items} loadMedia={loadMedia}>
+    <Lightbox.Root
+      items={items}
+      onValueChange={(value) => {
+        valueRef.current = value;
+      }}
+      // The viewer waits for its image to load, and for this Promise: the
+      // slow photo takes 1.5 s more, as on a slow network.
+      onOpenChange={(open) => {
+        const photo = items.find((item) => item.id === valueRef.current);
+        if (open && photo?.network === "slow") return delay(1500);
+        return undefined;
+      }}
+    >
       <div className={local.Gallery}>
         {items.map((photo) => (
           <div key={photo.id} className={local.Item}>

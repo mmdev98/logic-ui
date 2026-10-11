@@ -1,14 +1,8 @@
 "use client";
 import * as React from "react";
-import { Lightbox, loadLightboxMedia } from "@logic-ui/react/lightbox";
+import { Lightbox } from "@logic-ui/react/lightbox";
 import { Toolbar } from "@logic-ui/react/toolbar";
-import {
-  getThumbnailSrc,
-  loadVideoSize,
-  type MediaItem,
-  photos,
-  videos,
-} from "./_photos";
+import { getThumbnailSrc, type MediaItem, photos, videos } from "./_photos";
 import { CloseIcon, PlayIcon, ZoomInIcon, ZoomOutIcon } from "./_icons";
 import { classes } from "./_classes";
 
@@ -31,19 +25,13 @@ const items: Item[] = [
   { ...photos[1], type: "image" },
 ];
 
-function loadMedia(item: Item) {
-  return item.type === "video"
-    ? loadVideoSize(item.src)
-    : loadLightboxMedia(item);
-}
-
 /**
  * Photos and a video in one viewer. The video pauses when you swipe away
  * or close; the zoom buttons are disabled on it, as only images zoom.
  */
 export default function ExampleLightboxVideo() {
   return (
-    <Lightbox.Root items={items} loadMedia={loadMedia}>
+    <Lightbox.Root items={items}>
       <div className={local.Row}>
         {items.map((item) => (
           <Lightbox.Trigger

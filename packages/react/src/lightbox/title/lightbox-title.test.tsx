@@ -4,7 +4,6 @@ import { Lightbox } from "..";
 import {
   clickButton,
   ITEMS,
-  loadMedia,
   openLightboxAt,
   type TestItem,
   waitForFrames,
@@ -12,7 +11,7 @@ import {
 
 function renderWithTitle(title: React.ReactNode): void {
   render(
-    <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+    <Lightbox.Root items={ITEMS}>
       <Lightbox.Trigger value="a" />
       <Lightbox.Portal>
         <Lightbox.Popup>

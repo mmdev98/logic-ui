@@ -33,6 +33,8 @@ export type LightboxMediaEntry = {
   layout: LightboxMediaLayout;
   /** Measures the media again; it registers again with its new layout. */
   measure: () => void;
+  /** Whether it has loaded, or failed, or knows its size: the viewer can open on it. */
+  ready: boolean;
 };
 
 /**
@@ -52,9 +54,12 @@ export interface LightboxRootContextValue {
   activeItem: unknown;
   /** Value of the item shown in the viewer, or last shown. */
   activeValue: LightboxItemValue | undefined;
+  /** Whether the viewer is shown open, once its change has waited. */
   open: boolean;
   phase: LightboxRootPhase;
-  /** Value of the item whose image loads before the viewer opens. */
+  /** Whether the viewer is mounted out of sight while its media loads, before it opens. */
+  preparing: boolean;
+  /** Value of the item the viewer is about to open on, while it prepares. */
   pendingValue: LightboxItemValue | null;
   /** The trigger the image flies from or lands on, while it flies. */
   flyingTrigger: HTMLElement | null;
@@ -80,19 +85,23 @@ export interface LightboxRootContextValue {
   /** The `Lightbox.ThumbnailList`, when there is one. */
   thumbnailList: LightboxThumbnailListEntry | null;
   /**
-   * Loads the item's image, then opens the viewer on it. The image flies from
-   * `eventDetails.trigger` (else the item's trigger), and focus returns to it on close.
+   * Shows the item, then opens the viewer on it once its media has loaded.
+   * The image flies from `eventDetails.trigger` (else the item's trigger), and
+   * focus returns to it on close.
    */
   openValue: (
     value: LightboxItemValue,
     eventDetails: LightboxRootChangeEventDetails,
-  ) => Promise<void>;
-  // Each asks `onValueChange` first, and returns whether the item changed.
-  /** `velocity`: of the pull that dismissed it (px/ms), which the flight starts with. */
+  ) => void;
+  /**
+   * Asks `onOpenChange`, and returns whether the viewer goes on to close.
+   * `velocity`: of the pull that dismissed it (px/ms), which the flight starts with.
+   */
   close: (
     eventDetails: LightboxRootChangeEventDetails,
     velocity?: { x: number; y: number },
   ) => boolean;
+  // Each asks `onValueChange` first, and returns whether the item changed.
   goTo: (
     index: number,
     eventDetails: LightboxRootChangeEventDetails,

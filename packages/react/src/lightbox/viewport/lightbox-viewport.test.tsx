@@ -11,6 +11,7 @@ import {
   changeDetails,
   firePointer,
   ITEMS,
+  loadImages,
   openLightboxAt,
   TestLightbox,
 } from "../test-utils";
@@ -239,7 +240,7 @@ describe("Lightbox.Viewport", () => {
       },
     );
     render(
-      <Lightbox.Root items={ITEMS} defaultValue="a">
+      <Lightbox.Root items={ITEMS} defaultValue="a" defaultOpen>
         <Lightbox.Portal>
           <Lightbox.Popup>
             <Lightbox.Viewport
@@ -255,6 +256,7 @@ describe("Lightbox.Viewport", () => {
       </Lightbox.Root>,
     );
     await screen.findByRole("dialog");
+    await loadImages();
     // Open: the viewer takes gestures once it has finished opening.
     await wait(100);
     const viewport = screen.getByTestId("viewport");
@@ -276,7 +278,7 @@ describe("Lightbox.Viewport", () => {
       alt: id,
     }));
     render(
-      <Lightbox.Root items={items} defaultValue="c">
+      <Lightbox.Root items={items} defaultValue="c" defaultOpen>
         <Lightbox.Portal>
           <Lightbox.Popup>
             <Lightbox.Viewport neighbors={2}>
@@ -289,6 +291,7 @@ describe("Lightbox.Viewport", () => {
       </Lightbox.Root>,
     );
     await screen.findByRole("dialog");
+    await loadImages();
 
     for (const id of ["a", "b", "c", "d", "e"])
       expect(screen.getByTestId(`slide-${id}`)).toBeTruthy();
@@ -517,6 +520,7 @@ describe("Lightbox.Viewport", () => {
       render(
         <TestLightbox
           defaultValue="a"
+          defaultOpen
           value={controlled ? "a" : undefined}
           onValueChange={(value, details) => {
             onValueChange(value, details);
@@ -525,6 +529,7 @@ describe("Lightbox.Viewport", () => {
         />,
       );
       await screen.findByRole("dialog");
+      await loadImages();
       await wait(100);
       const viewport = screen.getByTestId("viewport");
       expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
@@ -558,9 +563,10 @@ describe("Lightbox.Viewport", () => {
     async (delay) => {
       const onValueChange = vi.fn();
       const { rerender } = render(
-        <TestLightbox value="a" onValueChange={onValueChange} />,
+        <TestLightbox value="a" defaultOpen onValueChange={onValueChange} />,
       );
       await screen.findByRole("dialog");
+      await loadImages();
       await wait(100);
       const viewport = screen.getByTestId("viewport");
       expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
@@ -581,7 +587,9 @@ describe("Lightbox.Viewport", () => {
       if (delay !== null) {
         if (delay > 0) await wait(delay);
         const transform = getTrack().style.transform;
-        rerender(<TestLightbox value="c" onValueChange={onValueChange} />);
+        rerender(
+          <TestLightbox value="c" defaultOpen onValueChange={onValueChange} />,
+        );
         expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
         expect(getTrack().style.transform).toBe(transform);
       }
@@ -603,6 +611,7 @@ describe("Lightbox.Viewport", () => {
         <Lightbox.Root
           items={ITEMS}
           defaultValue="a"
+          defaultOpen
           onValueChange={onValueChange}
         >
           <Lightbox.Portal>
@@ -622,6 +631,7 @@ describe("Lightbox.Viewport", () => {
         </Lightbox.Root>,
       );
       await screen.findByRole("dialog");
+      await loadImages();
       await wait(100);
       const viewport = screen.getByTestId("viewport");
       const sign = direction === "rtl" ? -1 : 1;
@@ -723,12 +733,13 @@ describe("Lightbox.Viewport", () => {
   });
 
   it("slides to an item the app shows by changing value", async () => {
-    const { rerender } = render(<TestLightbox value="a" />);
+    const { rerender } = render(<TestLightbox value="a" defaultOpen />);
     await screen.findByRole("dialog");
+    await loadImages();
     await wait(100);
     expect(getTrack().style.transform).toBe("translate3d(0px, 0px, 0px)");
 
-    rerender(<TestLightbox value="b" />);
+    rerender(<TestLightbox value="b" defaultOpen />);
 
     // Starts where the first item was, then slides to the second.
     expect(getTrack().style.transform).toBe("translate3d(0px, 0px, 0px)");
@@ -739,12 +750,13 @@ describe("Lightbox.Viewport", () => {
   });
 
   it("doesn't slide when items are added before the item shown", async () => {
-    const { rerender } = render(<TestLightbox value="a" />);
+    const { rerender } = render(<TestLightbox value="a" defaultOpen />);
     await screen.findByRole("dialog");
+    await loadImages();
     await wait(100);
 
     const added = { id: "z", src: "/z.jpg", alt: "New" };
-    rerender(<TestLightbox value="a" items={[added, ...ITEMS]} />);
+    rerender(<TestLightbox value="a" defaultOpen items={[added, ...ITEMS]} />);
 
     expect(getTrack().style.transform).toBe(
       `translate3d(${-ITEM_WIDTH}px, 0px, 0px)`,
@@ -865,8 +877,8 @@ describe("Lightbox.Viewport", () => {
   });
 
   it("closes after a drag down", async () => {
-    const onValueChange = vi.fn();
-    render(<TestLightbox onValueChange={onValueChange} />);
+    const onOpenChange = vi.fn();
+    render(<TestLightbox onOpenChange={onOpenChange} />);
     await openLightboxAt("Open image 1 of 3");
     const viewport = screen.getByTestId("viewport");
 
@@ -875,13 +887,13 @@ describe("Lightbox.Viewport", () => {
       firePointer("pointerMove", viewport, 205, 200);
       firePointer("pointerMove", viewport, 205, 300);
     });
-    expect(onValueChange).not.toHaveBeenCalledWith(null, expect.anything());
+    expect(onOpenChange).not.toHaveBeenCalledWith(false, expect.anything());
 
     await act(async () => {
       firePointer("pointerUp", viewport, 205, 300);
     });
-    expect(onValueChange).toHaveBeenLastCalledWith(
-      null,
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
       changeDetails("swipe"),
     );
   });
@@ -889,8 +901,8 @@ describe("Lightbox.Viewport", () => {
   it("stays open, and the image springs back, when the app cancels a pull to dismiss", async () => {
     render(
       <TestLightbox
-        onValueChange={(value, eventDetails) => {
-          if (value === null) eventDetails.cancel();
+        onOpenChange={(open, eventDetails) => {
+          if (!open) eventDetails.cancel();
         }}
       />,
     );

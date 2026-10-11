@@ -12,15 +12,15 @@ import { Lightbox } from "..";
 import {
   firePointer,
   ITEMS,
-  loadMedia,
   openLightboxAt,
+  pressTrigger,
   TestLightbox,
   type TestItem,
 } from "../test-utils";
 
 function renderWithMedia(media: (item: TestItem) => React.ReactNode): void {
   render(
-    <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+    <Lightbox.Root items={ITEMS}>
       <Lightbox.Trigger value="a" />
       <Lightbox.Portal>
         <Lightbox.Popup data-testid="popup">
@@ -68,7 +68,7 @@ describe("Lightbox.Media", () => {
 
   it("exposes data-loading until its image loads", async () => {
     render(<TestLightbox />);
-    await openLightboxAt("Open image 1 of 3");
+    await pressTrigger("Open image 1 of 3");
     const media = screen.getByTestId("media-a");
     expect(media.hasAttribute("data-loading")).toBe(true);
 
@@ -115,7 +115,7 @@ describe("Lightbox.Media", () => {
         )}
       />,
     );
-    await openLightboxAt("Open image 1 of 3");
+    await pressTrigger("Open image 1 of 3");
     const media = screen.getByTestId("media-a");
 
     fireEvent.load(screen.getByRole("img", { name: "Broken" }));

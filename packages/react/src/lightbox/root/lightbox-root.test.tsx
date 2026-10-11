@@ -17,7 +17,7 @@ import {
   changeDetails,
   firePointer,
   ITEMS,
-  loadMedia,
+  loadImages,
   openLightboxAt,
   TestLightbox,
   type TestItem,
@@ -26,8 +26,8 @@ import {
 
 describe("Lightbox.Root", () => {
   it("returns focus to the trigger when the viewer closes", async () => {
-    const onValueChange = vi.fn();
-    render(<TestLightbox onValueChange={onValueChange} />);
+    const onOpenChange = vi.fn();
+    render(<TestLightbox onOpenChange={onOpenChange} />);
     const trigger = screen.getByRole("button", { name: "Open image 1 of 3" });
     await openLightboxAt("Open image 1 of 3");
     expect(document.activeElement).not.toBe(trigger);
@@ -37,28 +37,62 @@ describe("Lightbox.Root", () => {
     });
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(onValueChange).toHaveBeenLastCalledWith(
-      null,
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
       changeDetails("close-press"),
     );
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("opens on defaultValue", async () => {
-    render(<TestLightbox defaultValue="b" />);
+  it("opens with defaultOpen on defaultValue", async () => {
+    render(<TestLightbox defaultOpen defaultValue="b" />);
     await screen.findByRole("dialog");
+    await loadImages();
     expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
+    expect(screen.getByTestId("popup").style.opacity).toBe("");
+  });
+
+  it("shows the first item until a value is set", async () => {
+    render(<TestLightbox defaultOpen />);
+    await screen.findByRole("dialog");
+    expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
+  });
+
+  it("can control open", async () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <TestLightbox open={false} onOpenChange={onOpenChange} />,
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    rerender(<TestLightbox open onOpenChange={onOpenChange} />);
+    await screen.findByRole("dialog");
+    await loadImages();
+    expect(screen.getByTestId("popup").style.opacity).toBe("");
+
+    // A controlled viewer only closes through the prop.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+    await waitForFrames();
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
+      changeDetails("close-press"),
+    );
+    expect(screen.getByTestId("popup").hasAttribute("data-ending-style")).toBe(
+      false,
+    );
+
+    rerender(<TestLightbox open={false} onOpenChange={onOpenChange} />);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("can control the value", async () => {
     const onValueChange = vi.fn();
     const { rerender } = render(
-      <TestLightbox value={null} onValueChange={onValueChange} />,
+      <TestLightbox value="c" onValueChange={onValueChange} />,
     );
-    expect(screen.queryByRole("dialog")).toBeNull();
-
-    rerender(<TestLightbox value="c" onValueChange={onValueChange} />);
-    await screen.findByRole("dialog");
+    await openLightboxAt("Open image 3 of 3");
     expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
 
     // A controlled value only changes through the prop.
@@ -71,15 +105,25 @@ describe("Lightbox.Root", () => {
     );
     expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
 
-    // Closing only reports `null`.
+    rerender(<TestLightbox value="b" onValueChange={onValueChange} />);
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
+  });
+
+  it("keeps the value on the last item after closing", async () => {
+    const onValueChange = vi.fn();
+    render(<TestLightbox onValueChange={onValueChange} />);
+    await openLightboxAt("Open image 2 of 3");
+
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Close" }));
     });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    expect(onValueChange).toHaveBeenCalledTimes(1);
     expect(onValueChange).toHaveBeenLastCalledWith(
-      null,
-      changeDetails("close-press"),
+      "b",
+      changeDetails("trigger-press"),
     );
-    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("keeps the open item when items are added before it", async () => {
@@ -116,17 +160,17 @@ describe("Lightbox.Root", () => {
   });
 
   it("closes when the last item is removed", async () => {
-    const onValueChange = vi.fn();
+    const onOpenChange = vi.fn();
     const { rerender } = render(
-      <TestLightbox items={ITEMS.slice(0, 1)} onValueChange={onValueChange} />,
+      <TestLightbox items={ITEMS.slice(0, 1)} onOpenChange={onOpenChange} />,
     );
     await openLightboxAt("Open image 1 of 1");
 
-    rerender(<TestLightbox items={[]} onValueChange={onValueChange} />);
+    rerender(<TestLightbox items={[]} onOpenChange={onOpenChange} />);
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(onValueChange).toHaveBeenLastCalledWith(
-      null,
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
       changeDetails("missing"),
     );
   });
@@ -141,7 +185,6 @@ describe("Lightbox.Root", () => {
       <Lightbox.Root
         items={photos}
         itemToValue={(photo) => photo.key}
-        loadMedia={() => Promise.resolve(null)}
         onValueChange={onValueChange}
       >
         <Lightbox.Trigger value={20} />
@@ -191,14 +234,15 @@ describe("Lightbox.createHandle", () => {
   it("links triggers outside the root, and opens and closes from code", async () => {
     const handle = Lightbox.createHandle();
     const onValueChange = vi.fn();
+    const onOpenChange = vi.fn();
     render(
       <div>
         <Lightbox.Trigger handle={handle} value="b" />
         <Lightbox.Root
           handle={handle}
           items={ITEMS}
-          loadMedia={loadMedia}
           onValueChange={onValueChange}
+          onOpenChange={onOpenChange}
         >
           <Lightbox.Portal>
             <Lightbox.Popup />
@@ -218,8 +262,8 @@ describe("Lightbox.createHandle", () => {
     expect(handle.isOpen).toBe(true);
 
     act(() => handle.close());
-    expect(onValueChange).toHaveBeenLastCalledWith(
-      null,
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
       changeDetails("imperative-action"),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -229,6 +273,10 @@ describe("Lightbox.createHandle", () => {
     await screen.findByRole("dialog");
     expect(onValueChange).toHaveBeenLastCalledWith(
       "c",
+      changeDetails("imperative-action"),
+    );
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      true,
       changeDetails("imperative-action"),
     );
   });
@@ -246,12 +294,6 @@ describe("Lightbox.Root onValueChange", () => {
       reason: "keyboard",
       run: () => fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" }),
       value: "c",
-    },
-    {
-      reason: "escape-key",
-      run: () =>
-        fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" }),
-      value: null,
     },
   ] as const)(
     "reports $reason as the reason",
@@ -271,13 +313,55 @@ describe("Lightbox.Root onValueChange", () => {
     },
   );
 
-  it("keeps the viewer closed when the app cancels the opening", async () => {
+  it("keeps the viewer closed when the app cancels the item it opens on", async () => {
     const onValueChange = vi.fn(
       (value: unknown, eventDetails: LightboxRootChangeEventDetails) => {
         eventDetails.cancel();
       },
     );
-    render(<TestLightbox onValueChange={onValueChange} />);
+    const onOpenChange = vi.fn();
+    render(
+      <TestLightbox
+        onValueChange={onValueChange}
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Open image 2 of 3" }),
+      );
+    });
+
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("Lightbox.Root onOpenChange", () => {
+  it("reports escape-key as the reason", async () => {
+    const onOpenChange = vi.fn();
+    render(<TestLightbox onOpenChange={onOpenChange} />);
+    await openLightboxAt("Open image 1 of 3");
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    });
+
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
+      changeDetails("escape-key"),
+    );
+  });
+
+  it("keeps the viewer closed when the app cancels the opening", async () => {
+    const onOpenChange = vi.fn(
+      (open: boolean, eventDetails: LightboxRootChangeEventDetails) => {
+        eventDetails.cancel();
+      },
+    );
+    render(<TestLightbox onOpenChange={onOpenChange} />);
 
     await act(async () => {
       fireEvent.click(
@@ -285,14 +369,14 @@ describe("Lightbox.Root onValueChange", () => {
       );
     });
 
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("stays open when the app cancels Escape", async () => {
     render(
       <TestLightbox
-        onValueChange={(value, eventDetails) => {
+        onOpenChange={(open, eventDetails) => {
           if (eventDetails.reason === "escape-key") eventDetails.cancel();
         }}
       />,
@@ -305,6 +389,193 @@ describe("Lightbox.Root onValueChange", () => {
     await waitForFrames();
 
     expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByTestId("popup").hasAttribute("data-ending-style")).toBe(
+      false,
+    );
+  });
+
+  it("waits for the Promise it returns before opening", async () => {
+    let resolve: () => void = () => {};
+    const onOpenChangeComplete = vi.fn();
+    render(
+      <TestLightbox
+        onOpenChange={() =>
+          new Promise<void>((done) => {
+            resolve = done;
+          })
+        }
+        onOpenChangeComplete={onOpenChangeComplete}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "Open image 1 of 3" });
+
+    await openLightboxAt("Open image 1 of 3");
+    // Loaded, but still waiting on the app.
+    expect(trigger.hasAttribute("data-pending")).toBe(true);
+    expect(screen.getByTestId("popup").style.opacity).toBe("0");
+
+    await act(async () => resolve());
+    await waitForFrames();
+
+    expect(trigger.hasAttribute("data-pending")).toBe(false);
+    expect(screen.getByTestId("popup").style.opacity).toBe("");
+    expect(onOpenChangeComplete).toHaveBeenLastCalledWith(true);
+  });
+
+  it("waits for the Promise it returns before closing", async () => {
+    let resolve: () => void = () => {};
+    render(
+      <TestLightbox
+        onOpenChange={(open) =>
+          open
+            ? undefined
+            : new Promise<void>((done) => {
+                resolve = done;
+              })
+        }
+      />,
+    );
+    await openLightboxAt("Open image 1 of 3");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+    await waitForFrames();
+    expect(screen.getByTestId("popup").hasAttribute("data-ending-style")).toBe(
+      false,
+    );
+
+    await act(async () => resolve());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("drops an opening the app cancels after an await", async () => {
+    let finish: () => void = () => {};
+    const onOpenChangeComplete = vi.fn();
+    render(
+      <TestLightbox
+        onOpenChange={async (open, eventDetails) => {
+          await new Promise<void>((done) => {
+            finish = done;
+          });
+          eventDetails.cancel();
+        }}
+        onOpenChangeComplete={onOpenChangeComplete}
+      />,
+    );
+
+    await openLightboxAt("Open image 1 of 3");
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    await act(async () => finish());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(onOpenChangeComplete).not.toHaveBeenCalled();
+  });
+
+  it("keeps the viewer open when the app cancels a close after an await", async () => {
+    let finish: () => void = () => {};
+    const onOpenChange = vi.fn(
+      async (open: boolean, eventDetails: LightboxRootChangeEventDetails) => {
+        if (open) return;
+        await new Promise<void>((done) => {
+          finish = done;
+        });
+        eventDetails.cancel();
+      },
+    );
+    render(<TestLightbox onOpenChange={onOpenChange} />);
+    await openLightboxAt("Open image 1 of 3");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+    await act(async () => finish());
+    await waitForFrames();
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByTestId("popup").hasAttribute("data-ending-style")).toBe(
+      false,
+    );
+    // It never closed, so nothing reopens it.
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes after the time limit when the Promise doesn't settle, and ignores a later cancel", async () => {
+    let details: LightboxRootChangeEventDetails | null = null;
+    render(
+      <TestLightbox
+        onOpenChange={(open, eventDetails) => {
+          if (open) return undefined;
+          details = eventDetails;
+          return new Promise<void>(() => {});
+        }}
+      />,
+    );
+    await openLightboxAt("Open image 1 of 3");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    act(() => details?.cancel());
+    await waitForFrames();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens after the time limit when the image never loads", async () => {
+    render(<TestLightbox />);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Open image 1 of 3" }),
+      );
+    });
+    expect(screen.getByTestId("popup").style.opacity).toBe("0");
+
+    await waitFor(
+      () => expect(screen.getByTestId("popup").style.opacity).toBe(""),
+      { timeout: 4000 },
+    );
+  }, 8000);
+
+  it("logs a rejected Promise and opens anyway", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    onTestFinished(() => consoleError.mockRestore());
+    const error = new Error("Not ready");
+    render(<TestLightbox onOpenChange={() => Promise.reject(error)} />);
+
+    await openLightboxAt("Open image 1 of 3");
+    await waitForFrames();
+
+    expect(consoleError).toHaveBeenCalledWith(error);
+    expect(screen.getByTestId("popup").style.opacity).toBe("");
+  });
+
+  it("replaces an opening still waiting with a close", async () => {
+    const onOpenChange = vi.fn((open: boolean) =>
+      open ? new Promise<void>(() => {}) : undefined,
+    );
+    const onOpenChangeComplete = vi.fn();
+    render(
+      <TestLightbox
+        onOpenChange={onOpenChange}
+        onOpenChangeComplete={onOpenChangeComplete}
+      />,
+    );
+    await openLightboxAt("Open image 1 of 3");
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    });
+
+    expect(onOpenChange).toHaveBeenLastCalledWith(
+      false,
+      changeDetails("escape-key"),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(onOpenChangeComplete).not.toHaveBeenCalled();
   });
 
   it("calls onOpenChangeComplete once the viewer has opened, and once it has closed", async () => {
@@ -761,10 +1032,72 @@ describe("Lightbox.Root closeTarget", () => {
   });
 });
 
+describe("Lightbox.Root scrollToTrigger", () => {
+  function mockScrollIntoView() {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    onTestFinished(() => {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+    });
+    return scrollIntoView;
+  }
+
+  it("scrolls the page to the trigger of the item shown, at once", async () => {
+    const scrollIntoView = mockScrollIntoView();
+    render(<TestLightbox />);
+    const third = screen.getByRole("button", { name: "Open image 3 of 3" });
+    await openLightboxAt("Open image 1 of 3");
+    scrollIntoView.mockClear();
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
+    });
+
+    expect(scrollIntoView.mock.contexts).toEqual([third]);
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "instant",
+    });
+  });
+
+  it("scrolls to the trigger closeTarget picks", async () => {
+    const scrollIntoView = mockScrollIntoView();
+    render(<TestLightbox closeTarget={"nearest"} triggerValues={["a"]} />);
+    const first = screen.getByRole("button", { name: "Open image 1 of 3" });
+    await openLightboxAt("Open image 1 of 3");
+    scrollIntoView.mockClear();
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
+    });
+
+    expect(scrollIntoView.mock.contexts).toEqual([first]);
+  });
+
+  it("doesn't scroll when false", async () => {
+    const scrollIntoView = mockScrollIntoView();
+    render(<TestLightbox scrollToTrigger={false} />);
+    await openLightboxAt("Open image 1 of 3");
+
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+});
+
 describe("Lightbox.Root with a portal that stays mounted", () => {
   it("opens and closes with a portal that stays mounted", async () => {
     render(
-      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+      <Lightbox.Root items={ITEMS}>
         <Lightbox.Trigger value="a" />
         <Lightbox.Portal keepMounted>
           <Lightbox.Popup data-testid="popup">
@@ -849,7 +1182,7 @@ describe("Lightbox.Root opening a viewer kept mounted while closed", () => {
       delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
     });
     render(
-      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+      <Lightbox.Root items={ITEMS}>
         <Lightbox.Trigger value="a" />
         <Lightbox.Portal keepMounted>
           <Lightbox.Popup>
@@ -877,67 +1210,5 @@ describe("Lightbox.Root opening a viewer kept mounted while closed", () => {
       /scale\(([\d.]+)\)/.exec(String(keyframes?.[0]?.transform))?.[1],
     );
     expect(scale).toBeLessThan(1);
-  });
-});
-
-describe("Lightbox.Root scrollToTrigger", () => {
-  function mockScrollIntoView() {
-    const scrollIntoView = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      configurable: true,
-      value: scrollIntoView,
-    });
-    onTestFinished(() => {
-      delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
-    });
-    return scrollIntoView;
-  }
-
-  it("scrolls the page to the trigger of the item shown, at once", async () => {
-    const scrollIntoView = mockScrollIntoView();
-    render(<TestLightbox />);
-    const third = screen.getByRole("button", { name: "Open image 3 of 3" });
-    await openLightboxAt("Open image 1 of 3");
-    scrollIntoView.mockClear();
-
-    await act(async () => {
-      fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
-    });
-
-    expect(scrollIntoView.mock.contexts).toEqual([third]);
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      block: "nearest",
-      inline: "nearest",
-      behavior: "instant",
-    });
-  });
-
-  it("scrolls to the trigger closeTarget picks", async () => {
-    const scrollIntoView = mockScrollIntoView();
-    render(<TestLightbox closeTarget={"nearest"} triggerValues={["a"]} />);
-    const first = screen.getByRole("button", { name: "Open image 1 of 3" });
-    await openLightboxAt("Open image 1 of 3");
-    scrollIntoView.mockClear();
-
-    await act(async () => {
-      fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
-    });
-
-    expect(scrollIntoView.mock.contexts).toEqual([first]);
-  });
-
-  it("doesn't scroll when false", async () => {
-    const scrollIntoView = mockScrollIntoView();
-    render(<TestLightbox scrollToTrigger={false} />);
-    await openLightboxAt("Open image 1 of 3");
-
-    await act(async () => {
-      fireEvent.keyDown(screen.getByRole("dialog"), { key: "End" });
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    });
-
-    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

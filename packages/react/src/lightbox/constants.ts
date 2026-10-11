@@ -6,8 +6,14 @@ export const LIGHTBOX_ZOOM_SCALE = {
   doubleTap: 2.5,
 } as const;
 
-/** The viewer opens anyway when the image takes longer than this to load (ms). */
-export const LIGHTBOX_PRELOAD_TIMEOUT = 3000;
+/**
+ * Longest the viewer waits before it opens (ms): for its media to load, and
+ * for the Promise `onOpenChange` returns. It opens anyway after that.
+ */
+export const LIGHTBOX_OPEN_TIMEOUT = 3000;
+
+/** Longest the viewer waits for the Promise `onOpenChange` returns before it closes (ms). */
+export const LIGHTBOX_CLOSE_TIMEOUT = 300;
 
 /** Items rendered on each side of the active one; the others stay empty. */
 export const LIGHTBOX_RENDERED_NEIGHBORS = 1;

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Lightbox } from "..";
 import {
-  clickButton,
+  pressButton,
   ITEMS,
   openLightboxAt,
   TestLightbox,
@@ -44,7 +44,7 @@ describe("Lightbox.Caption", () => {
       screen.getByTestId("caption-a").hasAttribute("data-starting-style"),
     ).toBe(false);
 
-    await clickButton("Next image");
+    pressButton("Next image");
 
     expect(second.hasAttribute("data-starting-style")).toBe(true);
     expect(second.getAttribute("data-activation-direction")).toBe("right");

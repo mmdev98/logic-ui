@@ -15,11 +15,11 @@ import * as REASONS from "../lightbox-reasons";
 import { useLightboxElementRef } from "../use-lightbox-element-ref";
 
 export type LightboxTriggerState = {
-  /** Whether its image loads before the viewer opens. */
+  /** Whether the viewer is about to open from it: its media loads, or `onOpenChange` is waited on. */
   pending: boolean;
   /** Whether the image flies from it or back to it. Hide the trigger meanwhile. */
   flying: boolean;
-  /** Whether another trigger's image is loading. */
+  /** Whether the viewer is about to open from another trigger. */
   disabled: boolean;
   /**
    * Whether the image will fly back to it when the viewer closes: the
@@ -158,7 +158,7 @@ export function LightboxTrigger(
         "aria-disabled": disabled || undefined,
         onClick: (event) => {
           if (disabled || !root) return;
-          void root.openValue(
+          root.openValue(
             value,
             createLightboxChangeEventDetails(
               REASONS.triggerPress,

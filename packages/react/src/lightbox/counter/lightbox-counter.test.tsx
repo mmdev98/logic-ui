@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Lightbox } from "..";
 import {
-  clickButton,
+  pressButton,
   ITEMS,
   openLightboxAt,
   TestLightbox,
@@ -38,7 +38,7 @@ describe("Lightbox.Counter", () => {
     expect(counter.hasAttribute("data-starting-style")).toBe(false);
     expect(counter.getAttribute("data-activation-direction")).toBe("none");
 
-    await clickButton("Previous image");
+    pressButton("Previous image");
 
     expect(counter.textContent).toBe("1 / 3");
     expect(counter.hasAttribute("data-starting-style")).toBe(true);

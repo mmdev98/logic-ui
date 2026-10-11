@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Lightbox } from "..";
 import {
   clickButton,
+  pressButton,
   ITEMS,
   openLightboxAt,
   TestLightbox,
@@ -41,7 +42,7 @@ describe("Lightbox.Description", () => {
       screen.getByText("About First").hasAttribute("data-starting-style"),
     ).toBe(false);
 
-    await clickButton("Next image");
+    pressButton("Next image");
 
     const caption = screen.getByText("About Second");
     expect(caption.hasAttribute("data-starting-style")).toBe(true);

@@ -1,10 +1,6 @@
 "use client";
 import * as React from "react";
-import {
-  Lightbox,
-  type LightboxItemValue,
-  loadLightboxMedia,
-} from "@logic-ui/react/lightbox";
+import { Lightbox, type LightboxItemValue } from "@logic-ui/react/lightbox";
 import { useStableCallback } from "@logic-ui/react/utils";
 import { cn } from "cn";
 import { videos } from "./_photos";
@@ -535,8 +531,12 @@ function StoryCard(props: StoryCardProps) {
  * story moves on to the next person. Swipe to change person.
  */
 export default function ExampleLightboxStories(): React.ReactElement {
-  // Controlled, so the stories can move on to the next person by themselves.
-  const [open, setOpen] = React.useState<LightboxItemValue | null>(null);
+  // Controlled, so the stories can move on to the next person by themselves,
+  // and close after the last one.
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState<LightboxItemValue>(people[0].id);
+  // The person shown, at once: a press reports them just before it opens.
+  const valueRef = React.useRef(value);
   // The story each person is on, and who has been watched to the end.
   const [positions, setPositions] = React.useState<Record<string, number>>({});
   const [seen, setSeen] = React.useState<ReadonlySet<string>>(() => new Set());
@@ -561,25 +561,28 @@ export default function ExampleLightboxStories(): React.ReactElement {
       : position;
   };
 
-  const showPerson = (value: LightboxItemValue | null) => {
-    const person = people.find((other) => other.id === value);
+  const showPerson = (next: LightboxItemValue) => {
+    const person = people.find((other) => other.id === next);
     if (person)
       setPositions((current) => ({
         ...current,
         [person.id]: getStart(person),
       }));
-    setOpen(value);
+    valueRef.current = next;
+    setValue(next);
   };
 
   /** Steps through the stories of the person shown, then on to the next person. */
   const step = (delta: 1 | -1) => {
-    const index = people.findIndex((person) => person.id === open);
+    const index = people.findIndex((person) => person.id === value);
     const person = people[index];
     if (!person) return;
     const next = (positions[person.id] ?? 0) + delta;
     if (next >= person.frames.length) {
       setSeen((current) => new Set(current).add(person.id));
-      showPerson(people[index + 1]?.id ?? null);
+      const nextPerson = people[index + 1];
+      if (nextPerson) showPerson(nextPerson.id);
+      else setOpen(false);
     } else if (next < 0) {
       const previous = people[index - 1];
       if (previous) showPerson(previous.id);
@@ -607,18 +610,17 @@ export default function ExampleLightboxStories(): React.ReactElement {
   return (
     <Lightbox.Root
       items={people}
-      value={open}
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Each person picks up where they left off, or starts again once seen.
+        if (nextOpen) showPerson(valueRef.current);
+        setOpen(nextOpen);
+      }}
+      value={value}
       onValueChange={showPerson}
       onOpenChangeComplete={(isOpen) => {
         setLanded(isOpen);
         if (!isOpen) setPaused(false);
-      }}
-      // The story the person is on loads before the card flies out of the ring.
-      loadMedia={(person: Person) => {
-        const frame = person.frames[getStart(person)];
-        return frame.video
-          ? Promise.resolve(null)
-          : loadLightboxMedia({ src: frame.src });
       }}
       maxScale={1}
     >
@@ -721,10 +723,10 @@ export default function ExampleLightboxStories(): React.ReactElement {
                   <StoryCard
                     person={person}
                     frameIndex={frameIndex}
-                    active={person.id === open}
+                    active={open && person.id === value}
                     playing={playing}
                     run={run}
-                    holding={holding && person.id === open}
+                    holding={holding && open && person.id === value}
                     paused={paused}
                     liked={liked.has(frame.id)}
                     onStep={step}

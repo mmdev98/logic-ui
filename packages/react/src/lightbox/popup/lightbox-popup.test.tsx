@@ -11,7 +11,6 @@ import { Lightbox } from "..";
 import {
   clickButton,
   ITEMS,
-  loadMedia,
   openLightboxAt,
   TestLightbox,
 } from "../test-utils";
@@ -96,7 +95,7 @@ describe("Lightbox.Popup", () => {
 
   it("focuses initialFocus instead when given", async () => {
     render(
-      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+      <Lightbox.Root items={ITEMS}>
         <Lightbox.Trigger value="a" />
         <Lightbox.Portal>
           <Lightbox.Popup initialFocus={true}>
@@ -192,7 +191,7 @@ describe("Lightbox.Popup state", () => {
 
   it("passes the lightbox state to its className and render functions", async () => {
     render(
-      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+      <Lightbox.Root items={ITEMS}>
         <Lightbox.Trigger value="a" />
         <Lightbox.Portal>
           <Lightbox.Popup

@@ -11,21 +11,22 @@ breaking change is listed under its release.
   `--gallery-dismiss-progress` is now `--lightbox-dismiss-progress`. The lightbox is the
   full-screen viewer only: the page around the triggers is yours.
 - **Items are picked by value, not by index.** `Root` takes `value` / `defaultValue` /
-  `onValueChange` (the open item's value, `null` while closed) instead of `open` /
-  `defaultOpen` / `onOpenChange` and `index` / `defaultIndex` / `onIndexChange`. An item's
+  `onValueChange` (the value of the item shown, never `null`: it stays on the last item after
+  closing, and defaults to the first) instead of `index` / `defaultIndex` / `onIndexChange`.
+  Whether the viewer is open stays apart, in `open` / `defaultOpen` / `onOpenChange`. An item's
   value is its `id`, or what the new `itemToValue` returns. `Trigger` takes `value` instead of
-  `index`. The open item stays open when items are added, removed or reordered.
+  `index`; pressing it calls `onValueChange` when it shows another item, then `onOpenChange`.
+  The open item stays open when items are added, removed or reordered.
 - **`Item` is now `Slide`**, and takes no `index`: return it from the function passed to
   `Viewport`. With thumbnails, the slides are their tab panels.
 - **`Image` is replaced by `Media`**, which wraps your own `<img>`, `<video>` or `<iframe>`:
   `<Lightbox.Media width={photo.width} height={photo.height}><img src={photo.src} alt={photo.alt} /></Lightbox.Media>`.
   It takes the natural `width` and `height`; the `src` and `alt` go on your element. The
-  whole box flies and follows the pull to dismiss, and only an `<img>` zooms. `loadImage` is
-  now `loadMedia` (and `loadLightboxImage` is `loadLightboxMedia`), and `LightboxImageStatus`
-  is `LightboxMediaStatus`.
+  whole box flies and follows the pull to dismiss, and only an `<img>` zooms. `LightboxImageStatus` is
+  `LightboxMediaStatus`.
 - **Items can have any shape.** `GalleryItemData` is removed. The parts take what they need
   as props, and `Description` takes a function child to show the item's caption:
-  `{(photo) => photo.caption}`. `loadMedia` receives your item.
+  `{(photo) => photo.caption}`.
 - **`Value` is now `Counter`.**
 - **`ZoomValue`'s function child receives its state**, `{(state) => state.scale}`, instead of
   the scale.
@@ -39,7 +40,13 @@ breaking change is listed under its release.
   `ThumbnailList`, like Base UI's drawer. `ThumbnailList`'s state field is `swiping`.
 - **`data-popup-open` marks the trigger the image will fly back to**: the one of the item shown,
   or the one `closeTarget` picks. Before, it marked every trigger of the item shown.
-- **`onValueChange` receives `eventDetails`** as its second argument, like Base UI's callbacks.
+- **`onValueChange` and `onOpenChange` receive `eventDetails`** as their second argument, like
+  Base UI's callbacks.
+- **Removed `loadImage`, `loadLightboxImage` and `LIGHTBOX_PRELOAD_TIMEOUT`.** The viewer loads
+  its media itself: before it opens, it is mounted out of sight until the `<img>` or `<video>` in
+  `Media` has loaded (a video, its size), for up to `LIGHTBOX_OPEN_TIMEOUT` (3 s). The trigger
+  has `data-pending` meanwhile. The thumbnail and the viewer can show different URLs with no
+  extra code.
 - **`Viewport` and `Slide` no longer clip.** Add `overflow-hidden` to the viewport in a viewer
   smaller than the screen.
 - **Closed sets are string unions, not enums, named after their part like Base UI's.** Write the
@@ -50,6 +57,11 @@ breaking change is listed under its release.
 
 ### New features
 
+- **`onOpenChange` can return a Promise**, and the viewer waits for it: up to 3 s before it
+  opens, 300 ms before it closes (`LIGHTBOX_OPEN_TIMEOUT`, `LIGHTBOX_CLOSE_TIMEOUT`). Use it
+  to get something ready, such as moving a live element into the viewer.
+  `eventDetails.cancel()` works until the wait ends, after an `await` too, and a cancelled
+  change never happened.
 - `Lightbox.createHandle()` links triggers placed outside `Root` to it, like Base UI's detached
   triggers, and opens or closes the lightbox from code.
 - **Any media.** `Media` shows a video or an embed as well as an image, and reads its loading

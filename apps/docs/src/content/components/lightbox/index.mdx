@@ -139,7 +139,7 @@ Each ring is a person, and the items of the lightbox are the people: swipe, or d
 
 - **They play by themselves.** One bar per story fills for five seconds, or for the length of a video, then the next story shows, then the next person. After the last one, the viewer closes, and the ring turns grey.
 - **Tap** the left third of the card to go back, anywhere else to go on; ← → do the same. **Hold** to pause; the controls fade while you hold. The pause button and typing a reply pause too, as WCAG asks of content that moves on by itself.
-- **Controlled.** The stories move on to the next person by changing `value`, and the viewer slides there as it does for Next. `onOpenChangeComplete` starts the bars once the card has landed, and `loadMedia` loads the story the person is on before the card flies out of their ring.
+- **Controlled.** The stories move on to the next person by changing `value`, and the viewer slides there as it does for Next; after the last person, `open` turns `false`. `onOpenChangeComplete` starts the bars once the card has landed. The viewer loads the story the person is on before the card flies out of their ring.
 - **Keys of your own.** The popup's `onKeyDown` runs before its shortcuts: it takes ← → for the stories and prevents the default, so the library doesn't also change the person.
 
 The rings take `crossfade`, since they show a face rather than the story: the card grows out of the face as it opens, and turns back into it as it flies home.
@@ -216,28 +216,28 @@ The viewer's state is one value: the open item's, or `null` while it is closed. 
 <Demo src="./demos/manager.tsx" />
 
 ```tsx title="Controlled lightbox"
-const [value, setValue] = React.useState<LightboxItemValue | null>(null);
+const [open, setOpen] = React.useState(false);
+const [value, setValue] = React.useState<LightboxItemValue>(photos[0].id);
 
-<Lightbox.Root items={photos} value={value} onValueChange={setValue}>
+<Lightbox.Root
+  items={photos}
+  open={open}
+  onOpenChange={setOpen}
+  value={value}
+  onValueChange={setValue}
+>
   …
 </Lightbox.Root>;
 ```
 
-`onValueChange` also receives `eventDetails`, built like Base UI's: `reason` tells what changed the item (`"swipe"`, `"trigger-press"`, `"thumbnail-press"`, `"escape-key"`, `"close-press"` …), `event` is the native event and `trigger` the element it came from. Call `eventDetails.cancel()` to keep the current item: a cancelled swipe springs back, and a cancelled pull to dismiss puts the image back. `onOpenChangeComplete` is called once the image has landed, in the viewer (`true`) or back on the page (`false`).
+Both callbacks also receive `eventDetails`, built like Base UI's: `reason` tells what made the change (`"swipe"`, `"trigger-press"`, `"thumbnail-press"`, `"escape-key"`, `"close-press"` …), `event` is the native event and `trigger` the element it came from. Call `eventDetails.cancel()` to stop it: a cancelled swipe springs back, and a cancelled pull to dismiss puts the image back. `onOpenChangeComplete` is called once the image has landed, in the viewer (`true`) or back on the page (`false`).
 
 ```tsx title="Change reasons"
 <Lightbox.Root
   items={photos}
-  onValueChange={(value, eventDetails) => {
-    // Opening pushes a history entry; moving between photos replaces it.
-    if (eventDetails.reason === "trigger-press") {
-      history.pushState(null, "", `?photo=${value}`);
-    } else if (value !== null) {
-      history.replaceState(null, "", `?photo=${value}`);
-    }
-  }}
-  onOpenChangeComplete={(open) => {
-    if (!open) history.replaceState(null, "", location.pathname);
+  onOpenChange={(open, eventDetails) => {
+    // A press outside the image keeps the viewer open; Escape and Close still close it.
+    if (eventDetails.reason === "outside-press") eventDetails.cancel();
   }}
 >
   …
@@ -246,7 +246,9 @@ const [value, setValue] = React.useState<LightboxItemValue | null>(null);
 
 ### Loading and errors
 
-The trigger loads the image before the viewer opens, so it shows at once and flies at the right size; the trigger has `data-pending` meanwhile. By default the item's `src` is loaded; pass `loadMedia` to choose how, as here where the slow photo waits 1.5 seconds.
+Before it opens, the viewer is mounted out of sight until the `<img>` or `<video>` in `Lightbox.Media` has loaded (a video, its size), so the image shows at once and flies at the right size. The trigger has `data-pending` meanwhile. The viewer opens anyway after `LIGHTBOX_OPEN_TIMEOUT` (3 s), still loading.
+
+`onOpenChange` can return a Promise, and the viewer waits for it as well: here the slow photo waits 1.5 seconds more, as on a slow network. It waits up to 3 s before opening and 300 ms before closing (`LIGHTBOX_CLOSE_TIMEOUT`), then goes on. `eventDetails.cancel()` works until the wait ends, after an `await` too, and a cancelled change never happened: no `onOpenChangeComplete`, nothing to undo. A rejected Promise is logged, and the viewer goes on.
 
 Inside the viewer, `Lightbox.Media` and its `Lightbox.Slide` have `data-loading` while the media loads and `data-error` if it fails, from the media's own events. Put a spinner or a message next to the media, inside `Lightbox.Media`: everything in it flies and follows the pull to dismiss. When the image fails, hide it (`group-data-error:invisible`): the box keeps its shape and the message takes its place. Give the `<img>` a new `src` to load it again. A failed image doesn't zoom, and the viewer keeps working.
 
@@ -268,11 +270,11 @@ Inside the viewer, `Lightbox.Media` and its `Lightbox.Slide` have `data-loading`
 
 `Lightbox.Media` only reads its direct `<img>`, `<video>` or `<iframe>` child (or the `<img>` of a `<picture>`), so an icon inside the message doesn't count. Content without one counts as loaded at once.
 
-To show smaller images as thumbnails and larger ones in the viewer, give the `<img>` its own `src` or `srcSet`, and pass `loadMedia` so the viewer preloads the same URL: `loadMedia={(photo) => loadLightboxMedia({ src: getViewerSrc(photo) })}`.
+To show smaller images as thumbnails and larger ones in the viewer, give each `<img>` its own `src` or `srcSet`: the viewer waits for the one it shows.
 
 ### Video and other media
 
-`Lightbox.Media` takes any media as its direct child: an `<img>`, a `<video>`, an `<iframe>`. It fits the media's shape inside the slide, flies it from the trigger and back, and follows the pull to dismiss. Only images zoom: on other media the zoom gestures do nothing and `Lightbox.ZoomIn` is disabled. A video pauses when its slide is no longer shown and when the viewer closes, and while a player with `controls` has focus, the arrow keys stay its own. Pass your own `loadMedia` so a video doesn't preload as an image: here it reads the video's size from its metadata.
+`Lightbox.Media` takes any media as its direct child: an `<img>`, a `<video>`, an `<iframe>`. It fits the media's shape inside the slide, flies it from the trigger and back, and follows the pull to dismiss. Only images zoom: on other media the zoom gestures do nothing and `Lightbox.ZoomIn` is disabled. A video pauses when its slide is no longer shown and when the viewer closes, and while a player with `controls` has focus, the arrow keys stay its own. Give the `<video>` `preload="metadata"`: the viewer opens once it knows the video's size.
 
 <Demo src="./demos/video.tsx" />
 
@@ -377,7 +379,7 @@ Every part is unstyled. Style the viewer with Tailwind (or any CSS), using the p
 - `Lightbox.Slide` has `--lightbox-slide-progress`: its distance from the centre in slides, on every frame the slides move. It is placed with `translate`, leaving `transform` free for a custom transition (a cube, a fade, a stack); put a `perspective` on `Lightbox.Viewport` for 3D.
 - `Lightbox.Slide`'s padding is the space around the media: `p-0` for edge to edge on phones, `md:px-24` on larger screens. Add `pt-[env(safe-area-inset-top)]` and the like for notches (with `viewport-fit=cover` on the page). It has `data-active`, and `data-loading` and `data-error` for its media.
 - `Lightbox.Media` sets its own position and size, and the size of the media in it: style what's around the media, not its box.
-- `Lightbox.Trigger` has `data-popup-open` while the image will fly back to it, from the opening flight to the end of the closing one: the trigger of the item shown, or the one `closeTarget` picks. Hide it with `data-popup-open:invisible`: the thumbnail disappears from the page but keeps its place, and comes back when the image lands. It also has `data-pending` while its image loads, and `data-flying` while the image flies from it or to it.
+- `Lightbox.Trigger` has `data-popup-open` while the image will fly back to it, from the opening flight to the end of the closing one: the trigger of the item shown, or the one `closeTarget` picks. Hide it with `data-popup-open:invisible`: the thumbnail disappears from the page but keeps its place, and comes back when the image lands. It also has `data-pending` while the viewer waits to open from it, and `data-flying` while the image flies from it or to it.
 
 ### Keyboard
 

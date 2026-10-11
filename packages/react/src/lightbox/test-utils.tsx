@@ -1,5 +1,5 @@
 import { act, fireEvent, screen } from "@testing-library/react";
-import { expect, vi } from "vitest";
+import { expect } from "vitest";
 import {
   Lightbox,
   type LightboxRootChangeEventReason,
@@ -18,11 +18,6 @@ export const ITEMS: TestItem[] = [
   { id: "b", src: "/b.jpg", alt: "Second" },
   { id: "c", src: "/c.jpg", alt: "Third" },
 ];
-
-/** Resolves at once, so the viewer opens without loading a real image. */
-export const loadMedia = vi.fn<
-  NonNullable<LightboxRootProps<TestItem>["loadMedia"]>
->(() => Promise.resolve({ width: 400, height: 300 }));
 
 export type TestLightboxProps = Partial<LightboxRootProps<TestItem>> & {
   /** Rendered inside each slide's media, after the image. */
@@ -49,7 +44,7 @@ export function TestLightbox(props: TestLightboxProps): React.ReactElement {
     ...rootProps
   } = props;
   return (
-    <Lightbox.Root items={items} loadMedia={loadMedia} {...rootProps}>
+    <Lightbox.Root items={items} {...rootProps}>
       {triggerValues.map((value) => (
         <Lightbox.Trigger key={value} value={value} crossfade={crossfade} />
       ))}
@@ -91,12 +86,36 @@ export function changeDetails(reason: LightboxRootChangeEventReason): unknown {
   return expect.objectContaining({ reason });
 }
 
-/** Clicks the trigger named `name` and waits for the viewer. */
+/**
+ * Fires `load` on the images of the viewer, which jsdom never loads, so a
+ * viewer waiting on them opens. Only images with a `src`, like the media.
+ */
+export async function loadImages(): Promise<void> {
+  await act(async () => {
+    for (const image of document.querySelectorAll("[role=dialog] img[src]"))
+      fireEvent.load(image);
+  });
+  await waitForFrames();
+}
+
+/**
+ * Clicks the trigger named `name`: the viewer mounts out of sight, waiting
+ * for its images.
+ */
+export async function pressTrigger(name: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }));
+  });
+  await screen.findByRole("dialog");
+}
+
+/** Clicks the trigger named `name`, loads the images and waits for the viewer. */
 export async function openLightboxAt(name: string): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name }));
   });
   await screen.findByRole("dialog");
+  await loadImages();
 }
 
 export function firePointer(
@@ -123,6 +142,17 @@ export function waitForFrames(): Promise<void> {
         setTimeout(resolve, 50);
       }),
   );
+}
+
+/**
+ * Clicks the button named `name` in a synchronous `act`, which doesn't let an
+ * animation frame pass: for state that lasts one frame, like
+ * `data-starting-style`.
+ */
+export function pressButton(name: string): void {
+  act(() => {
+    fireEvent.click(screen.getByRole("button", { name }));
+  });
 }
 
 /** Clicks the button named `name` and flushes the update. */
