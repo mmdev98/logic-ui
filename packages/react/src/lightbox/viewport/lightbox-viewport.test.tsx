@@ -182,6 +182,48 @@ describe("Lightbox.Viewport", () => {
     expect(screen.queryByTestId("slide-c")).toBeNull();
   });
 
+  it("moves the slides further per px of finger travel with --lightbox-swipe-distance", async () => {
+    // The probe that measures `--lightbox-swipe-distance` resolves it to 100 px
+    // (jsdom can't): a quarter of the viewport.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const width = this.style.width.includes("--lightbox-swipe-distance")
+          ? 100
+          : ITEM_WIDTH;
+        return DOMRect.fromRect({ x: 0, y: 0, width, height: 300 });
+      },
+    );
+    render(
+      <Lightbox.Root items={ITEMS} defaultValue="a">
+        <Lightbox.Portal>
+          <Lightbox.Popup>
+            <Lightbox.Viewport
+              data-testid="viewport"
+              style={{ ["--lightbox-swipe-distance" as string]: "100px" }}
+            >
+              {(item: { id: string }) => (
+                <Lightbox.Slide data-testid={`slide-${item.id}`} />
+              )}
+            </Lightbox.Viewport>
+          </Lightbox.Popup>
+        </Lightbox.Portal>
+      </Lightbox.Root>,
+    );
+    await screen.findByRole("dialog");
+    // Open: the viewer takes gestures once it has finished opening.
+    await wait(100);
+    const viewport = screen.getByTestId("viewport");
+
+    await act(async () => {
+      firePointer("pointerDown", viewport, 300, 200);
+      firePointer("pointerMove", viewport, 275, 200);
+      firePointer("pointerMove", viewport, 250, 200);
+    });
+
+    // 50 px of finger travel, four times over: half a slide.
+    expect(getTrack().style.transform).toBe("translate3d(-200px, 0px, 0px)");
+  });
+
   it("renders more neighbours with neighbors", async () => {
     const items = ["a", "b", "c", "d", "e"].map((id) => ({
       id,

@@ -14,6 +14,7 @@ import {
 } from "../constants";
 import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { TRACK_PROGRESS } from "./lightbox-viewport-track";
+import { swipeDistance } from "./lightbox-viewport-css-vars";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import type { LightboxRootActivationDirection } from "../root/lightbox-root";
 import { prefersLightboxReducedMotion } from "../utils/lightbox-flight";
@@ -66,6 +67,9 @@ const INITIAL_METRICS: LightboxViewportContextValue = {
  * gestures (swipe, pinch, double tap, pan, pull to dismiss, wheel zoom). Give
  * it a size (usually `position: absolute; inset: 0` in the popup), and set
  * the space between slides with `column-gap` (`gap-4`).
+ * One slide of finger travel is the viewport's width plus that gap. When the
+ * CSS draws the slides closer together, as a coverflow does, set
+ * `--lightbox-swipe-distance` on it so they follow the finger.
  * It doesn't clip: the slides next to the one shown, the zoomed image and the
  * media pulled to dismiss are drawn past its edges. In a viewer smaller than
  * the screen, clip them with `overflow: hidden`; leave it off for a pulled
@@ -101,6 +105,10 @@ export function LightboxViewport(
 
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const trackRef = React.useRef<HTMLDivElement | null>(null);
+  // Measures `--lightbox-swipe-distance`, which can be any CSS length.
+  const swipeProbeRef = React.useRef<HTMLDivElement | null>(null);
+  // Track px per px of finger travel: 1 unless `--lightbox-swipe-distance` is set.
+  const swipeRatioRef = React.useRef(1);
   const mergedRef = useMergedRefs(ref, viewportRef);
   const [metrics, setMetrics] = React.useState(INITIAL_METRICS);
   const metricsRef = React.useRef(metrics);
@@ -208,6 +216,9 @@ export function LightboxViewport(
       gap: parseFloat(style.columnGap) || 0,
       directionSign: style.direction === "rtl" ? -1 : 1,
     };
+    const distance = swipeProbeRef.current?.getBoundingClientRect().width ?? 0;
+    swipeRatioRef.current =
+      distance > 0 ? (next.width + next.gap) / distance : 1;
     const current = metricsRef.current;
     if (
       current.width === next.width &&
@@ -225,6 +236,7 @@ export function LightboxViewport(
     if (!viewport || typeof ResizeObserver === "undefined") return undefined;
     const observer = new ResizeObserver(measure);
     observer.observe(viewport);
+    if (swipeProbeRef.current) observer.observe(swipeProbeRef.current);
     return () => observer.disconnect();
   }, [measure]);
 
@@ -278,6 +290,7 @@ export function LightboxViewport(
     getViewport: () => viewportRef.current,
     getWidth: () => metricsRef.current.width,
     getStride: () => metricsRef.current.width + metricsRef.current.gap,
+    getSwipeRatio: () => swipeRatioRef.current,
     directionSign: metrics.directionSign,
     getOffset: () => offsetRef.current,
     setOffset,
@@ -321,39 +334,56 @@ export function LightboxViewport(
           viewport.scrollTop = 0;
         },
         children: (
-          <div
-            ref={trackRef}
-            style={{
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              willChange: "transform",
-              // A `perspective` on the viewport reaches slides turned in 3D.
-              transformStyle: "preserve-3d",
-            }}
-          >
-            {items.map((item, itemIndex) => {
-              let position: number | null =
-                isLightboxItemRendered(itemIndex, index, neighbors) ||
-                (itemIndex >= visibleRange.start &&
-                  itemIndex <= visibleRange.end)
-                  ? itemIndex
-                  : null;
-              // During a jump, the item it left takes the neighbour's slot.
-              if (jumpSlot !== null && itemIndex === jumpSlot) position = null;
-              if (activeJump && itemIndex === activeJump.from)
-                position = jumpSlot;
-              if (position === null) return null;
-              return (
-                <LightboxViewportSlideContext
-                  key={values[itemIndex]}
-                  value={{ index: itemIndex, position }}
-                >
-                  {children(item, itemIndex)}
-                </LightboxViewportSlideContext>
-              );
-            })}
-          </div>
+          <React.Fragment>
+            <div
+              ref={trackRef}
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                willChange: "transform",
+                // A `perspective` on the viewport reaches slides turned in 3D.
+                transformStyle: "preserve-3d",
+              }}
+            >
+              {items.map((item, itemIndex) => {
+                let position: number | null =
+                  isLightboxItemRendered(itemIndex, index, neighbors) ||
+                  (itemIndex >= visibleRange.start &&
+                    itemIndex <= visibleRange.end)
+                    ? itemIndex
+                    : null;
+                // During a jump, the item it left takes the neighbour's slot.
+                if (jumpSlot !== null && itemIndex === jumpSlot)
+                  position = null;
+                if (activeJump && itemIndex === activeJump.from)
+                  position = jumpSlot;
+                if (position === null) return null;
+                return (
+                  <LightboxViewportSlideContext
+                    key={values[itemIndex]}
+                    value={{ index: itemIndex, position }}
+                  >
+                    {children(item, itemIndex)}
+                  </LightboxViewportSlideContext>
+                );
+              })}
+            </div>
+            {/* As wide as `--lightbox-swipe-distance`, or 0 without it. */}
+            <div
+              ref={swipeProbeRef}
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: `var(${swipeDistance}, 0px)`,
+                height: 0,
+                visibility: "hidden",
+                pointerEvents: "none",
+              }}
+            />
+          </React.Fragment>
         ),
       },
       elementProps,

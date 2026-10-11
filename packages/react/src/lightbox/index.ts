@@ -14,6 +14,7 @@ export * as LightboxSlideCssVars from "./slide/lightbox-slide-css-vars";
 export * as LightboxSlideDataAttributes from "./slide/lightbox-slide-data-attributes";
 export * as LightboxThumbnailDataAttributes from "./thumbnail/lightbox-thumbnail-data-attributes";
 export * as LightboxThumbnailIndicatorCssVars from "./thumbnail-indicator/lightbox-thumbnail-indicator-css-vars";
+export * as LightboxViewportCssVars from "./viewport/lightbox-viewport-css-vars";
 export * as LightboxThumbnailIndicatorDataAttributes from "./thumbnail-indicator/lightbox-thumbnail-indicator-data-attributes";
 export * as LightboxThumbnailListDataAttributes from "./thumbnail-list/lightbox-thumbnail-list-data-attributes";
 export * as LightboxTitleDataAttributes from "./title/lightbox-title-data-attributes";

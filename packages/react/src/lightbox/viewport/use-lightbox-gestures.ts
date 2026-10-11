@@ -103,6 +103,8 @@ export interface UseLightboxGesturesOptions {
   getWidth: () => number;
   /** Width of an item plus the gap after it (px). */
   getStride: () => number;
+  /** Track px per px the finger moves, from `--lightbox-swipe-distance`: 1 by default. */
+  getSwipeRatio: () => number;
   directionSign: 1 | -1;
   getOffset: () => number;
   /** Moves the track, in px along the reading direction. */
@@ -155,6 +157,7 @@ export function useLightboxGestures(
     getViewport,
     getWidth,
     getStride,
+    getSwipeRatio,
     directionSign,
     getOffset,
     setOffset,
@@ -408,7 +411,11 @@ export function useLightboxGestures(
       }
 
       if (state.mode === GestureMode.Swipe) {
-        setOffset(rubberbandOffset(state.offsetStart + deltaX * directionSign));
+        setOffset(
+          rubberbandOffset(
+            state.offsetStart + deltaX * getSwipeRatio() * directionSign,
+          ),
+        );
       } else if (state.mode === GestureMode.Pan && entry) {
         const { scale } = state.zoomStart;
         const bounds = getLightboxPanBounds(entry.layout, scale);
@@ -423,7 +430,9 @@ export function useLightboxGestures(
         root.setZoom({ scale, x, y });
         // Past the image's edge, the drag carries on as a swipe.
         setOffset(
-          rubberbandOffset(state.offsetStart + (targetX - x) * directionSign),
+          rubberbandOffset(
+            state.offsetStart + (targetX - x) * getSwipeRatio() * directionSign,
+          ),
         );
       } else if (state.mode === GestureMode.Dismiss) {
         const height = getDismissHeight(entry);
@@ -480,10 +489,16 @@ export function useLightboxGestures(
         }
         releaseTrack(0, event.nativeEvent);
       } else if (mode === GestureMode.Swipe) {
-        releaseTrack(velocity.x * directionSign, event.nativeEvent);
+        releaseTrack(
+          velocity.x * getSwipeRatio() * directionSign,
+          event.nativeEvent,
+        );
       } else if (mode === GestureMode.Pan) {
         if (getOffset() !== 0) {
-          releaseTrack(velocity.x * directionSign, event.nativeEvent);
+          releaseTrack(
+            velocity.x * getSwipeRatio() * directionSign,
+            event.nativeEvent,
+          );
           root.animateZoom(root.getZoom(), { clamp: true });
         } else {
           const zoom = root.getZoom();
