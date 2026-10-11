@@ -73,6 +73,47 @@ describe("Lightbox.Popup", () => {
     expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
   });
 
+  it("takes focus when it opens, so the keys work with a toolbar first", async () => {
+    render(
+      <TestLightbox
+        popupChildren={
+          <Toolbar.Root>
+            <Toolbar.Button>Rotate</Toolbar.Button>
+          </Toolbar.Root>
+        }
+      />,
+    );
+    await openLightboxAt("Open image 1 of 3");
+    const popup = screen.getByRole("dialog");
+    await waitFor(() => expect(document.activeElement).toBe(popup));
+
+    await act(async () => {
+      fireEvent.keyDown(popup, { key: "ArrowRight" });
+    });
+
+    expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
+  });
+
+  it("focuses initialFocus instead when given", async () => {
+    render(
+      <Lightbox.Root items={ITEMS} loadMedia={loadMedia}>
+        <Lightbox.Trigger value="a" />
+        <Lightbox.Portal>
+          <Lightbox.Popup initialFocus={true}>
+            <Lightbox.Close>Close</Lightbox.Close>
+          </Lightbox.Popup>
+        </Lightbox.Portal>
+      </Lightbox.Root>,
+    );
+    await openLightboxAt("Open image 1 of 3");
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Close" }),
+      ),
+    );
+  });
+
   it("leaves the arrow keys to a text field inside it", async () => {
     render(<TestLightbox popupChildren={<input aria-label="Comment" />} />);
     await openLightboxAt("Open image 1 of 3");

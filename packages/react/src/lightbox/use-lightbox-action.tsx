@@ -17,7 +17,7 @@ export type LightboxActionProps = useRender.ComponentProps<
 export interface UseLightboxActionOptions {
   props: LightboxActionProps;
   disabled: boolean;
-  onAction: () => void;
+  onAction: (event: React.MouseEvent<HTMLButtonElement>) => void;
   /** Default `aria-label`; the caller's wins. */
   label: string;
   /** Key announced with `aria-keyshortcuts`. */

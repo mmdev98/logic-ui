@@ -60,10 +60,9 @@ function isSameBoxes(a: IndicatorBoxes | null, b: IndicatorBoxes): boolean {
  * thumbnail, like Base UI's `Tabs.Indicator`. Place it in
  * `Lightbox.ThumbnailList`, after the function child, and make the list
  * `position: relative`: it gets the active thumbnail's box in the list as
- * CSS variables, and scrolls with the list. While a swipe drags the slides,
- * they move towards the next or previous thumbnail with it. Style it with
- * them, and a transition that is off during the drag:
- * `left: var(--active-thumbnail-left)`. Hidden from screen readers; renders
+ * CSS variables, and scrolls with the list. They move with the slides on
+ * every frame (a swipe, its settle, Next), so style it with them and no
+ * transition: `left: var(--active-thumbnail-left)`. Hidden from screen readers; renders
  * nothing until it has measured a thumbnail.
  * Renders a `<span>` element.
  */

@@ -8,7 +8,7 @@ import {
   type LightboxTransitionStatus,
 } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { type LightboxActivationDirection, LightboxPhase } from "../types";
+import { type LightboxActivationDirection } from "../types";
 import { useLightboxStartingStyle } from "../use-lightbox-starting-style";
 
 export type LightboxCounterState = {
@@ -47,10 +47,7 @@ export function LightboxCounter(
 
   const { index, items, phase, activationDirection } = useLightboxRootContext();
   const count = items.length;
-  const starting = useLightboxStartingStyle(
-    index,
-    phase === LightboxPhase.Open,
-  );
+  const starting = useLightboxStartingStyle(index, phase === "open");
 
   const state: LightboxCounterState = React.useMemo(
     () => ({

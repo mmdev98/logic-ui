@@ -15,7 +15,8 @@ import {
 } from "../lightbox-dialog-state";
 import { getLightboxStateAttributes } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { type LightboxActivationDirection, LightboxPhase } from "../types";
+import { type LightboxActivationDirection } from "../types";
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 
 export type LightboxPopupState = DialogPopupState & {
   /** Whether the active image is zoomed in. */
@@ -72,6 +73,8 @@ function isInLightboxKeyboardWidget(
 
 /**
  * The full-screen viewer. Place `Lightbox.Viewport` and the controls inside.
+ * It takes focus when it opens, so its keys work at once; Tab moves on to
+ * the controls. Pass `initialFocus` to focus another element.
  *
  * Keys: ← → previous / next (pan while zoomed), ↑ ↓ pan, Home / End first /
  * last, + − zoom, 0 reset zoom, Esc close. Inside a widget that uses these
@@ -81,9 +84,9 @@ function isInLightboxKeyboardWidget(
  * Has `data-zoomed` while the image is zoomed, `data-controls-hidden` after a
  * tap hides the controls, and `data-ending-style` while the image flies back
  * (fade the controls then, not the popup: the image is inside it). Gets
- * `--lightbox-dismiss-progress` while the image is dragged to close,
+ * `--lightbox-dismiss-progress` while the image is pulled to dismiss,
  * `--lightbox-swipe-movement-x` and `--lightbox-swipe-progress` while a swipe
- * moves the slides, and has `data-dragging` during a drag: turn transitions
+ * moves the slides, and has `data-swiping` during a drag: turn transitions
  * off then.
  * Renders a `<div>` element.
  */
@@ -106,7 +109,8 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
     panBy,
     setPopupElement,
   } = useLightboxRootContext();
-  const mergedRef = useMergedRefs(ref, setPopupElement);
+  const popupRef = React.useRef<HTMLDivElement | null>(null);
+  const mergedRef = useMergedRefs(ref, popupRef, setPopupElement);
 
   const extra = React.useMemo(
     () => ({ zoomed, controlsHidden, activationDirection }),
@@ -128,22 +132,26 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
       ownerWindow(event.currentTarget).getComputedStyle(event.currentTarget)
         .direction === "rtl";
     const step = LIGHTBOX_KEYBOARD_PAN_STEP;
+    const eventDetails = createLightboxChangeEventDetails(
+      "keyboard",
+      event.nativeEvent,
+    );
 
     const actions: Record<string, () => void> = {
       ArrowLeft: () => {
         if (zoomed) panBy(step, 0);
-        else if (isRtl) goToNext();
-        else goToPrevious();
+        else if (isRtl) goToNext(eventDetails);
+        else goToPrevious(eventDetails);
       },
       ArrowRight: () => {
         if (zoomed) panBy(-step, 0);
-        else if (isRtl) goToPrevious();
-        else goToNext();
+        else if (isRtl) goToPrevious(eventDetails);
+        else goToNext(eventDetails);
       },
       ArrowUp: () => panBy(0, step),
       ArrowDown: () => panBy(0, -step),
-      Home: () => goTo(0),
-      End: () => goTo(items.length - 1),
+      Home: () => goTo(0, eventDetails),
+      End: () => goTo(items.length - 1, eventDetails),
       "+": zoomIn,
       "=": zoomIn,
       "-": zoomOut,
@@ -159,11 +167,14 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
   return (
     <Dialog.Popup
       ref={mergedRef}
+      // The popup itself, not its first control: the keys work at once, even
+      // with a toolbar inside, which keeps the arrow keys while it has focus.
+      initialFocus={popupRef}
       finalFocus={() => getFinalFocus() ?? true}
       data-zoomed={zoomed ? "" : undefined}
       data-controls-hidden={controlsHidden ? "" : undefined}
       // The dialog stays open while the image flies back.
-      data-ending-style={phase === LightboxPhase.Closing ? "" : undefined}
+      data-ending-style={phase === "closing" ? "" : undefined}
       {...getLightboxStateAttributes(extra)}
       {...elementProps}
       {...addLightboxState<DialogPopupState, typeof extra>(

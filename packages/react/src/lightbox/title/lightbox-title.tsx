@@ -15,7 +15,7 @@ import {
   type LightboxTransitionStatus,
 } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { type LightboxActivationDirection, LightboxPhase } from "../types";
+import { type LightboxActivationDirection } from "../types";
 import { useLightboxStartingStyle } from "../use-lightbox-starting-style";
 
 export type LightboxTitleState = DialogTitleState & {
@@ -60,7 +60,7 @@ export function LightboxTitle(props: LightboxTitleProps): React.ReactElement {
 
   const starting = useLightboxStartingStyle(
     index,
-    followsItem && phase === LightboxPhase.Open,
+    followsItem && phase === "open",
   );
   const extra = React.useMemo(
     () => ({

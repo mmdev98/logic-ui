@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LightboxActivationDirection } from "../types";
+
 import {
   getLightboxActivationDirection,
   getLightboxSwipeStep,
@@ -49,9 +49,21 @@ describe("getLightboxSwipeStep", () => {
     expect(swipe(-150, 0.8)).toBe(0);
   });
 
-  it("never moves more than one item", () => {
-    expect(swipe(-900, -2)).toBe(1);
-  });
+  it.each([
+    { offset: -640, velocity: 0, step: 2 },
+    { offset: 640, velocity: 0, step: -2 },
+    { offset: -1240, velocity: 0, step: 3 },
+    { offset: 1240, velocity: 0, step: -3 },
+    { offset: -900, velocity: -2, step: 3 },
+    { offset: 900, velocity: 2, step: -3 },
+    { offset: -900, velocity: 2, step: 2 },
+    { offset: 900, velocity: -2, step: -2 },
+  ])(
+    "settles offset $offset at speed $velocity on item $step",
+    ({ offset, velocity, step }) => {
+      expect(swipe(offset, velocity)).toBe(step);
+    },
+  );
 
   // The previous swipe left the track 280 px towards the previous item and
   // was animating to 0 when this gesture caught it.
@@ -81,12 +93,12 @@ describe("getLightboxSwipeStep", () => {
 
 describe("getLightboxActivationDirection", () => {
   it.each([
-    [1, "ltr", LightboxActivationDirection.Right],
-    [-1, "ltr", LightboxActivationDirection.Left],
-    [3, "ltr", LightboxActivationDirection.Right],
-    [1, "rtl", LightboxActivationDirection.Left],
-    [-1, "rtl", LightboxActivationDirection.Right],
-    [0, "ltr", LightboxActivationDirection.None],
+    [1, "ltr", "right"],
+    [-1, "ltr", "left"],
+    [3, "ltr", "right"],
+    [1, "rtl", "left"],
+    [-1, "rtl", "right"],
+    [0, "ltr", "none"],
   ] as const)("a step of %s in %s comes from the %s", (step, dir, expected) => {
     expect(getLightboxActivationDirection(step, dir)).toBe(expected);
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LightboxMediaStatus } from "../types";
+
 import {
   fillLightboxMediaBox,
   findLightboxMediaElement,
@@ -114,25 +114,25 @@ describe("getLightboxMediaNaturalSize", () => {
 
 describe("getLightboxMediaStatus", () => {
   it("counts no media element as loaded", () => {
-    expect(getLightboxMediaStatus(null)).toBe(LightboxMediaStatus.Loaded);
+    expect(getLightboxMediaStatus(null)).toBe("loaded");
   });
 
   it("counts a complete image with a size as loaded", () => {
     const image = document.createElement("img");
     Object.defineProperty(image, "complete", { value: true });
     Object.defineProperty(image, "naturalWidth", { value: 800 });
-    expect(getLightboxMediaStatus(image)).toBe(LightboxMediaStatus.Loaded);
+    expect(getLightboxMediaStatus(image)).toBe("loaded");
   });
 
   it("counts an image without a size as loading", () => {
     const image = document.createElement("img");
     Object.defineProperty(image, "complete", { value: true });
-    expect(getLightboxMediaStatus(image)).toBe(LightboxMediaStatus.Loading);
+    expect(getLightboxMediaStatus(image)).toBe("loading");
   });
 
   it.each([
-    [0, LightboxMediaStatus.Loading],
-    [2, LightboxMediaStatus.Loaded],
+    [0, "loading"],
+    [2, "loaded"],
   ])("counts a video with readyState %s as %s", (readyState, expected) => {
     const video = document.createElement("video");
     Object.defineProperty(video, "readyState", { value: readyState });
@@ -141,7 +141,7 @@ describe("getLightboxMediaStatus", () => {
 
   it("counts an iframe as loading until its load event", () => {
     expect(getLightboxMediaStatus(document.createElement("iframe"))).toBe(
-      LightboxMediaStatus.Loading,
+      "loading",
     );
   });
 });

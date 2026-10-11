@@ -1,6 +1,10 @@
 import { act, fireEvent, screen } from "@testing-library/react";
-import { vi } from "vitest";
-import { Lightbox, type LightboxRootProps } from ".";
+import { expect, vi } from "vitest";
+import {
+  Lightbox,
+  type LightboxRootChangeEventReason,
+  type LightboxRootProps,
+} from ".";
 
 export type TestItem = {
   id: string;
@@ -27,6 +31,10 @@ export type TestLightboxProps = Partial<LightboxRootProps<TestItem>> & {
   itemChildren?: (item: TestItem) => React.ReactNode;
   /** Rendered inside the popup, after the controls. */
   popupChildren?: React.ReactNode;
+  /** Values of the items that get a trigger: every item by default. */
+  triggerValues?: readonly string[];
+  /** `crossfade` on every trigger. */
+  crossfade?: boolean;
 };
 
 /** A trigger per item and a viewer with every control. */
@@ -36,12 +44,14 @@ export function TestLightbox(props: TestLightboxProps): React.ReactElement {
     mediaChildren,
     itemChildren,
     popupChildren,
+    triggerValues = items.map((item) => item.id),
+    crossfade,
     ...rootProps
   } = props;
   return (
     <Lightbox.Root items={items} loadMedia={loadMedia} {...rootProps}>
-      {items.map((item) => (
-        <Lightbox.Trigger key={item.id} value={item.id} />
+      {triggerValues.map((value) => (
+        <Lightbox.Trigger key={value} value={value} crossfade={crossfade} />
       ))}
       <Lightbox.Portal>
         <Lightbox.Backdrop data-testid="backdrop" />
@@ -74,6 +84,11 @@ export function TestLightbox(props: TestLightboxProps): React.ReactElement {
       </Lightbox.Portal>
     </Lightbox.Root>
   );
+}
+
+/** Matches the `eventDetails` passed to `onValueChange` for this reason. */
+export function changeDetails(reason: LightboxRootChangeEventReason): unknown {
+  return expect.objectContaining({ reason });
 }
 
 /** Clicks the trigger named `name` and waits for the viewer. */

@@ -16,7 +16,7 @@ export const overflowStart = "data-overflow-start";
 export const overflowEnd = "data-overflow-end";
 
 /**
- * Present while the mouse drags the strip. Turn off snapping and transitions
+ * Present while the mouse swipes the strip. Turn off snapping and transitions
  * meanwhile.
  */
-export const dragging = "data-dragging";
+export const swiping = "data-swiping";

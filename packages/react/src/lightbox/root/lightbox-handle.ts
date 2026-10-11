@@ -1,6 +1,7 @@
 "use client";
 
-import type { LightboxItemValue } from "../types";
+import { type LightboxItemValue } from "../types";
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import type { LightboxRootContextValue } from "./lightbox-root-context";
 
 /**
@@ -15,12 +16,15 @@ export class LightboxHandle {
 
   /** Opens the lightbox on the item with this value. */
   open(value: LightboxItemValue): void {
-    void this.#root?.openValue(value);
+    void this.#root?.openValue(
+      value,
+      createLightboxChangeEventDetails("imperative-action"),
+    );
   }
 
   /** Closes the lightbox. */
   close(): void {
-    this.#root?.close();
+    this.#root?.close(createLightboxChangeEventDetails("imperative-action"));
   }
 
   /** Whether the lightbox is open. */

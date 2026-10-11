@@ -8,9 +8,11 @@ import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import {
   type LightboxActivationDirection,
-  LightboxMediaStatus,
+  type LightboxMediaStatus,
 } from "../types";
 import { getLightboxSlideId } from "../utils/lightbox-items";
+import { TRACK_PROGRESS } from "../viewport/lightbox-viewport-track";
+import { slideProgress } from "./lightbox-slide-css-vars";
 import {
   useLightboxViewportContext,
   useLightboxViewportSlideContext,
@@ -41,6 +43,9 @@ export type LightboxSlideProps = useRender.ComponentProps<
  * function passed to `Lightbox.Viewport`. Its padding is the space kept
  * around the media (`p-6 md:p-24`, or `p-0` for edge to edge). Put a
  * `Lightbox.Media` inside, and a `Lightbox.Caption`, or any other content.
+ * It has `--lightbox-slide-progress`, its distance from the centre, and it
+ * is placed with `translate`, so its `transform` is free for a custom
+ * transition between slides.
  * With a `Lightbox.ThumbnailList`, it is the tab panel of its thumbnail.
  * Renders a `<div>` element.
  */
@@ -60,7 +65,7 @@ export function LightboxSlide(
   const { width, gap, directionSign } = useLightboxViewportContext();
   const { index, position } = useLightboxViewportSlideContext();
   const [element, setElement] = React.useState<HTMLElement | null>(null);
-  const [status, setStatus] = React.useState(LightboxMediaStatus.Idle);
+  const [status, setStatus] = React.useState<LightboxMediaStatus>("idle");
   const [captionId, setCaptionId] = React.useState<string | undefined>();
   const handleElement = React.useCallback(
     (node: HTMLElement | null) => setElement(node),
@@ -92,8 +97,8 @@ export function LightboxSlide(
   const state: LightboxSlideState = React.useMemo(
     () => ({
       active,
-      loading: status === LightboxMediaStatus.Loading,
-      error: status === LightboxMediaStatus.Error,
+      loading: status === "loading",
+      error: status === "error",
       activationDirection,
     }),
     [active, status, activationDirection],
@@ -123,9 +128,13 @@ export function LightboxSlide(
         style: {
           position: "absolute",
           inset: 0,
-          overflow: "hidden",
           boxSizing: "border-box",
-          transform: `translate3d(${position * (width + gap) * directionSign}px, 0px, 0px)`,
+          // Its place on the track. With `translate`, so the app's `transform`
+          // (a rotation for a cube) turns the slide around its own box.
+          translate: `${position * (width + gap) * directionSign}px 0px`,
+          // Its distance from the centre, in slides, on every frame: the track
+          // writes how far it moved, and this slot adds its own place.
+          [slideProgress as string]: `calc(${position * directionSign} + var(${TRACK_PROGRESS}, 0))`,
         },
         children,
       },

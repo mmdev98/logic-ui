@@ -9,11 +9,7 @@ import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import { useLightboxSlideContext } from "../slide/lightbox-slide-context";
-import {
-  type LightboxMediaLayout,
-  LightboxMediaStatus,
-  LightboxPhase,
-} from "../types";
+import { type LightboxMediaLayout } from "../types";
 import { getLightboxContainedSize } from "../utils/lightbox-geometry";
 import {
   getLightboxAspectRatio,
@@ -70,13 +66,13 @@ function isSameLayout(a: LightboxMediaLayout | null, b: LightboxMediaLayout) {
  * The media of a `Lightbox.Slide`: put an `<img>`, a `<video>` or an
  * `<iframe>` inside, as its direct child. It is a box with the media's
  * shape, fitted inside the slide's padding, that the media fills. The box
- * flies from the trigger and back and follows the drag to close, with all
+ * flies from the trigger and back and follows the pull to dismiss, with all
  * of its content: put a spinner or an error message next to the media and
  * show them with the slide's `data-loading` and `data-error`. An `<img>`
  * also zooms and pans; other media don't. A `<video>` pauses when its
  * slide is no longer shown. The loading state comes from the
  * media's own events. Its position and size are set by the box, and its
- * `translate` and `scale` while it is dragged.
+ * `translate` and `scale` while it is pulled to dismiss.
  * Renders a `<div>` element.
  */
 export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
@@ -167,22 +163,20 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
       const next = getLightboxMediaStatus(mediaElement);
       setStatus(next);
       const size = mediaElement && getLightboxMediaNaturalSize(mediaElement);
-      if (next === LightboxMediaStatus.Loaded && size)
-        setMediaSize(value, size);
+      if (next === "loaded" && size) setMediaSize(value, size);
     };
     readStatus();
 
     const handleEvent = (event: Event) => {
       if (!mediaElement || event.target !== mediaElement) return;
       if (event.type === "error") {
-        setStatus(LightboxMediaStatus.Error);
+        setStatus("error");
         return;
       }
       const size = getLightboxMediaNaturalSize(mediaElement);
       if (size) setMediaSize(value, size);
       // A video knows its size before it can show a frame.
-      if (event.type !== "loadedmetadata")
-        setStatus(LightboxMediaStatus.Loaded);
+      if (event.type !== "loadedmetadata") setStatus("loaded");
     };
     for (const type of MEDIA_EVENTS) {
       box.addEventListener(type, handleEvent, true);
@@ -200,7 +194,7 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
         box.removeEventListener(type, handleEvent, true);
       }
       observer?.disconnect();
-      setStatus(LightboxMediaStatus.Idle);
+      setStatus("idle");
     };
   }, [box, mediaElement, value, setStatus, setMediaSize]);
 
@@ -212,7 +206,7 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
 
   // A video stops when its slide is no longer the one shown, or the viewer
   // closes.
-  const playing = active && phase !== LightboxPhase.Closing;
+  const playing = active && phase !== "closing";
   useIsoLayoutEffect(() => {
     if (playing || !isLightboxMediaPlayable(mediaElement)) return;
     (mediaElement as HTMLMediaElement).pause();
@@ -220,8 +214,7 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
 
   // A failed image is no longer one to zoom.
   const zoomElement =
-    isLightboxMediaZoomable(mediaElement) &&
-    status !== LightboxMediaStatus.Error
+    isLightboxMediaZoomable(mediaElement) && status !== "error"
       ? mediaElement
       : null;
 
@@ -238,8 +231,8 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
   const state: LightboxMediaState = React.useMemo(
     () => ({
       active,
-      loading: status === LightboxMediaStatus.Loading,
-      error: status === LightboxMediaStatus.Error,
+      loading: status === "loading",
+      error: status === "error",
     }),
     [active, status],
   );

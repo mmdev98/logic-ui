@@ -5,6 +5,34 @@ import { Lightbox } from "..";
 import { ITEMS, openLightboxAt, TestLightbox } from "../test-utils";
 
 describe("Lightbox.Slide", () => {
+  it("doesn't clip, so the app chooses what to clip", () => {
+    render(
+      <Lightbox.Root items={ITEMS} defaultValue="a">
+        <Lightbox.Viewport style={{ padding: "24px" }}>
+          {() => <Lightbox.Slide />}
+        </Lightbox.Viewport>
+      </Lightbox.Root>,
+    );
+    const viewport = screen.getByRole("region", { name: "Gallery" });
+    const slide = screen.getByRole("group", { name: "1 of 3" });
+    expect(viewport.style.overflow).toBe("");
+    expect(slide.style.overflow).toBe("");
+    expect(slide.style.clipPath).toBe("");
+  });
+
+  it("keeps the clip the app gives the viewport", () => {
+    render(
+      <Lightbox.Root items={ITEMS} defaultValue="a">
+        <Lightbox.Viewport style={{ overflow: "hidden" }}>
+          {() => <Lightbox.Slide />}
+        </Lightbox.Viewport>
+      </Lightbox.Root>,
+    );
+    expect(screen.getByRole("region", { name: "Gallery" }).style.overflow).toBe(
+      "hidden",
+    );
+  });
+
   it("renders a labelled slide and marks the active one", async () => {
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");

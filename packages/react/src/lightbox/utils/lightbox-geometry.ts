@@ -1,3 +1,4 @@
+import { ownerWindow } from "@base-ui/utils/owner";
 import type {
   LightboxDismiss,
   LightboxMediaLayout,
@@ -32,18 +33,63 @@ export function getLightboxContainedSize(
   return { width: containedWidth, height: containedWidth / aspectRatio };
 }
 
-export function isLightboxRectInViewport(
+/** Whether some of `rect` lies inside `area`. */
+export function isLightboxRectVisible(
   rect: LightboxRect,
-  viewport: LightboxMediaSize,
+  area: LightboxRect,
 ): boolean {
   return (
     rect.width > 0 &&
     rect.height > 0 &&
-    rect.left < viewport.width &&
-    rect.top < viewport.height &&
-    rect.left + rect.width > 0 &&
-    rect.top + rect.height > 0
+    rect.left < area.left + area.width &&
+    rect.top < area.top + area.height &&
+    rect.left + rect.width > area.left &&
+    rect.top + rect.height > area.top
   );
+}
+
+/** Where two boxes overlap: an empty box at the nearest corner when they don't. */
+export function intersectLightboxRects(
+  a: LightboxRect,
+  b: LightboxRect,
+): LightboxRect {
+  const left = Math.max(a.left, b.left);
+  const top = Math.max(a.top, b.top);
+  const right = Math.min(a.left + a.width, b.left + b.width);
+  const bottom = Math.min(a.top + a.height, b.top + b.height);
+  return {
+    left,
+    top,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+  };
+}
+
+/**
+ * The part of the window where `element` can be seen: the window, cut by
+ * each ancestor that clips its content, such as a scrolling list. A trigger
+ * scrolled out of its list is inside the window but can't be seen.
+ */
+export function getLightboxVisibleArea(element: Element): LightboxRect {
+  const win = ownerWindow(element);
+  const html = win.document.documentElement;
+  let area: LightboxRect = {
+    left: 0,
+    top: 0,
+    width: html.clientWidth,
+    height: html.clientHeight,
+  };
+  for (
+    let parent = element.parentElement;
+    parent && parent !== html;
+    parent = parent.parentElement
+  ) {
+    const style = win.getComputedStyle(parent);
+    if (style.overflowX === "visible" && style.overflowY === "visible")
+      continue;
+    area = intersectLightboxRects(area, toLightboxRect(parent));
+  }
+  return area;
 }
 
 export function formatLightboxTransform(
@@ -62,8 +108,16 @@ export function getLightboxPanBounds(
 ): { minX: number; maxX: number; minY: number; maxY: number } {
   const getAxis = (start: number, size: number, itemSize: number) => {
     const scaledSize = size * scale;
-    if (scaledSize <= itemSize) return { min: 0, max: 0 };
     const center = start + size / 2;
+    if (scaledSize <= itemSize) {
+      // An off-center image can fit but still grow past one edge.
+      const offset = clampLightboxValue(
+        0,
+        scaledSize / 2 - center,
+        itemSize - scaledSize / 2 - center,
+      );
+      return { min: offset, max: offset };
+    }
     return {
       min: itemSize - (center + scaledSize / 2),
       max: -(center - scaledSize / 2),

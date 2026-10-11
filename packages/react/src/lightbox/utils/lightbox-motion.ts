@@ -1,6 +1,6 @@
 import { AnimationFrame } from "@base-ui/utils/useAnimationFrame";
 import { LIGHTBOX_SWIPE_STRENGTH } from "../constants";
-import { LightboxActivationDirection } from "../types";
+import { type LightboxActivationDirection } from "../types";
 import { clampLightboxValue } from "./lightbox-geometry";
 
 /**
@@ -44,8 +44,9 @@ export interface LightboxSwipeRelease {
 
 /**
  * Item a released swipe settles on, relative to the active one: `1` the next
- * item, `-1` the previous one, `0` the active one. Offsets and velocity follow
- * the reading direction, so a swipe towards the end is negative.
+ * item, `-1` the previous one, `0` the active one. Longer drags can cross
+ * several items. Offsets and velocity follow the reading direction, so a
+ * swipe towards the end is negative.
  *
  * It looks at where the track is, not how far this gesture moved it, so a
  * swipe that catches the track mid-animation settles where it should:
@@ -53,9 +54,7 @@ export interface LightboxSwipeRelease {
  * - a slow release snaps to the nearest item, moving on once the drag
  *   crosses `minDistance` of an item.
  */
-export function getLightboxSwipeStep(
-  release: LightboxSwipeRelease,
-): -1 | 0 | 1 {
+export function getLightboxSwipeStep(release: LightboxSwipeRelease): number {
   const { offset, startOffset, velocity, stride, minDistance, minVelocity } =
     release;
   if (stride <= 0) return 0;
@@ -70,9 +69,7 @@ export function getLightboxSwipeStep(
     const direction = Math.sign(position - startPosition);
     target = Math.round(position + direction * (0.5 - minDistance));
   }
-  if (target >= 1) return 1;
-  if (target <= -1) return -1;
-  return 0;
+  return target || 0;
 }
 
 export function easeOutLightbox(progress: number): number {
@@ -109,10 +106,8 @@ export function getLightboxActivationDirection(
   step: number,
   direction: "ltr" | "rtl",
 ): LightboxActivationDirection {
-  if (step === 0) return LightboxActivationDirection.None;
+  if (step === 0) return "none";
   const forward = step > 0;
   const towardsRight = direction === "rtl" ? !forward : forward;
-  return towardsRight
-    ? LightboxActivationDirection.Right
-    : LightboxActivationDirection.Left;
+  return towardsRight ? "right" : "left";
 }

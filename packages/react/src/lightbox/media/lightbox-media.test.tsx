@@ -233,7 +233,7 @@ describe("Lightbox.Media gestures", () => {
     vi.restoreAllMocks();
   });
 
-  it("moves with the drag to close, with all of its content", async () => {
+  it("moves with the pull to dismiss, with all of its content", async () => {
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");
     const media = screen.getByTestId("media-a");
@@ -302,14 +302,31 @@ describe("Lightbox.Media flight", () => {
   });
 
   it("flies back from where the drag and the zoom left it", async () => {
+    // A 400 × 300 image in a 400 × 300 slide.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300);
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
     const animate = mockAnimate();
+    // The opening flight lands at once, so the viewer is open to zoom.
+    animate.mockImplementationOnce(
+      () =>
+        ({
+          finished: Promise.resolve(),
+          cancel: () => {},
+        }) as unknown as Animation,
+    );
     render(<TestLightbox />);
     await openLightboxAt("Open image 1 of 3");
     const media = screen.getByTestId("media-a");
     const image = screen.getByRole("img", { name: "First" });
+    // Zoomed to 150%, then dragged down a little.
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "+" });
+    await wait(400);
+    expect(image.style.transform).toContain("scale(1.5)");
     media.style.translate = "10px 60px";
     media.style.scale = "0.9";
-    image.style.transform = "translate3d(0px, 0px, 0px) scale(2)";
     animate.mockClear();
 
     await act(async () => {
@@ -318,8 +335,9 @@ describe("Lightbox.Media flight", () => {
 
     expect(animate.mock.contexts[0]).toBe(media);
     const [keyframes] = animate.mock.calls[0] as unknown as [Keyframe[]];
-    expect(keyframes[0]?.transform).toBe(
-      "translate(10px, 60px) scale(0.9) translate3d(0px, 0px, 0px) scale(2)",
+    // The zoom inside the dragged box: moved by the drag, scaled by both.
+    expect(keyframes[0]?.transform).toMatch(
+      /^translate3d\(10px, 60px, 0px\) scale\(1\.35\d*\)$/,
     );
     // The flight takes the drag and the zoom over as one `transform`.
     expect(media.style.translate).toBe("");

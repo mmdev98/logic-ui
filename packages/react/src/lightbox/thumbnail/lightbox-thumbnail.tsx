@@ -6,6 +6,8 @@ import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
+
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import { getLightboxSlideId } from "../utils/lightbox-items";
 import {
   useLightboxThumbnailListContext,
@@ -76,7 +78,15 @@ export function LightboxThumbnail(
         "aria-controls": active ? getLightboxSlideId(rootId, index) : undefined,
         tabIndex: index === focusIndex ? 0 : -1,
         onFocus: () => setFocusIndex(index),
-        onClick: () => goTo(index),
+        onClick: (event) =>
+          goTo(
+            index,
+            createLightboxChangeEventDetails(
+              "thumbnail-press",
+              event.nativeEvent,
+              event.currentTarget,
+            ),
+          ),
       },
       elementProps,
     ),

@@ -8,6 +8,8 @@ import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
+
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
   LightboxThumbnailListContext,
   type LightboxThumbnailListContextValue,
@@ -16,14 +18,19 @@ import {
 import { useLightboxThumbnailListScroll } from "./use-lightbox-thumbnail-list-scroll";
 
 export type LightboxThumbnailListState = {
-  /** Whether the thumbnails run left to right or top to bottom. */
+  /**
+   * Which way the thumbnails run.
+   *
+   * - `"horizontal"`: Left to right, or right to left in a right-to-left layout.
+   * - `"vertical"`: Top to bottom.
+   */
   orientation: "horizontal" | "vertical";
   /** Whether thumbnails are scrolled out of view before the start. */
   overflowStart: boolean;
   /** Whether thumbnails are scrolled out of view past the end. */
   overflowEnd: boolean;
   /** Whether the mouse drags the strip. */
-  dragging: boolean;
+  swiping: boolean;
 };
 
 /** Renders one thumbnail for an item, as passed to `items`. */
@@ -48,8 +55,11 @@ export interface LightboxThumbnailListProps extends Omit<
     | LightboxThumbnailRender
     | ReadonlyArray<LightboxThumbnailRender | React.ReactNode>;
   /**
-   * Which arrow keys move between thumbnails, ← → or ↑ ↓, and which way the
-   * strip scrolls.
+   * Which arrow keys move between thumbnails, and which way the strip
+   * scrolls. Set as `data-orientation`.
+   *
+   * - `"horizontal"`: ← → move, and the wheel scrolls the strip sideways.
+   * - `"vertical"`: ↑ ↓ move, for a column of thumbnails.
    * @default "horizontal"
    */
   orientation?: "horizontal" | "vertical";
@@ -171,7 +181,15 @@ export function LightboxThumbnailList(
       event.preventDefault();
       setFocusIndex(target);
       element.focus();
-      if (activateOnFocus) goTo(target);
+      if (activateOnFocus)
+        goTo(
+          target,
+          createLightboxChangeEventDetails(
+            "list-navigation",
+            event.nativeEvent,
+            element,
+          ),
+        );
     },
   );
 
@@ -191,9 +209,9 @@ export function LightboxThumbnailList(
       orientation,
       overflowStart: scroll.overflowStart,
       overflowEnd: scroll.overflowEnd,
-      dragging: scroll.dragging,
+      swiping: scroll.swiping,
     }),
-    [orientation, scroll.overflowStart, scroll.overflowEnd, scroll.dragging],
+    [orientation, scroll.overflowStart, scroll.overflowEnd, scroll.swiping],
   );
 
   const element = useRender({

@@ -12,25 +12,43 @@ import { useTimeout } from "@base-ui/utils/useTimeout";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import * as React from "react";
 import {
+  LIGHTBOX_CROSSFADE_WINDOW,
   LIGHTBOX_FLIGHT_DURATION,
   LIGHTBOX_FLIGHT_EASING,
   LIGHTBOX_ZOOM_SCALE,
 } from "../constants";
 import {
-  LightboxActivationDirection,
+  type LightboxActivationDirection,
+  type LightboxCloseTarget,
   type LightboxMediaSize,
-  LightboxPhase,
+  type LightboxPhase,
   type LightboxRect,
   type LightboxItemValue,
+  type LightboxRootChangeEventDetails,
+  type LightboxRootChangeEventReason,
 } from "../types";
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
-  LIGHTBOX_FLIGHT_REST,
-  getLightboxFlightKeyframe,
+  type LightboxEasing,
+  formatLightboxLinearEasing,
+  parseLightboxCubicBezier,
+} from "../utils/lightbox-easing";
+import {
+  type LightboxFlightState,
+  createLightboxStandIn,
+  getLightboxFadedState,
+  getLightboxFlightKeyframes,
   getLightboxFlightRadii,
+  getLightboxMovedState,
+  getLightboxReleaseEasing,
+  getLightboxRestState,
+  getLightboxStandInKeyframes,
+  interpolateLightboxFlightState,
   prefersLightboxReducedMotion,
 } from "../utils/lightbox-flight";
 import {
-  isLightboxRectInViewport,
+  getLightboxVisibleArea,
+  isLightboxRectVisible,
   isLightboxZoomed,
   toLightboxRect,
   zoomLightboxAroundPoint,
@@ -38,6 +56,7 @@ import {
 import {
   clampLightboxIndex,
   getLightboxItemValue,
+  getLightboxNearestIndex,
   loadLightboxMedia,
 } from "../utils/lightbox-items";
 import type { LightboxHandle } from "./lightbox-handle";
@@ -52,6 +71,8 @@ import {
 } from "./lightbox-root-context";
 import { getLightboxActivationDirection } from "../utils/lightbox-motion";
 import {
+  flightDuration,
+  flightEasing,
   swipeMovementX,
   swipeProgress,
   swipeStrength,
@@ -61,33 +82,38 @@ import { useLightboxZoom } from "./use-lightbox-zoom";
 /** Longest the viewer waits for its image before it counts as open (ms). */
 const OPENING_FALLBACK_DELAY = LIGHTBOX_FLIGHT_DURATION + 1000;
 
+/** The flight's curve when nothing throws the image: `LIGHTBOX_FLIGHT_EASING`. */
+const FLIGHT_EASING = parseLightboxCubicBezier(LIGHTBOX_FLIGHT_EASING);
+
 /**
- * Runs a flight with the Web Animations API and calls `onFinish` when it
- * ends. Finishes at once where the API is missing (jsdom, old browsers).
+ * Runs an animation with the Web Animations API and calls `onFinish` when
+ * it ends. Finishes at once where the API is missing (jsdom, old browsers).
  */
 function animateLightboxMedia(
   element: HTMLElement,
   keyframes: Keyframe[],
+  options: KeyframeAnimationOptions,
   onFinish: () => void,
-  fill: FillMode = "none",
 ): Animation | null {
   if (typeof element.animate !== "function") {
     onFinish();
     return null;
   }
-  const animation = element.animate(keyframes, {
-    duration: LIGHTBOX_FLIGHT_DURATION,
-    easing: LIGHTBOX_FLIGHT_EASING,
-    fill,
-  });
-  // A cancelled flight rejects; the code that cancels it moves on itself.
+  const animation = element.animate(keyframes, options);
+  // A cancelled animation rejects; the code that cancels it moves on itself.
   animation.finished.then(onFinish, () => {});
   return animation;
 }
 
-/** Image state when there is no trigger on screen to fly from or back to. */
-const FADED_OUT: Keyframe = { opacity: 0, scale: "0.95" };
-const FADED_IN: Keyframe = { opacity: 1, scale: "1" };
+/** A running flight: enough to tell where the media is at any moment. */
+type LightboxFlight = {
+  element: HTMLElement;
+  from: LightboxFlightState;
+  to: LightboxFlightState;
+  easing: LightboxEasing;
+  duration: number;
+  animations: Animation[];
+};
 
 export interface LightboxRootProps<Item = unknown> {
   /** The items, in order. They can have any shape. */
@@ -106,8 +132,34 @@ export interface LightboxRootProps<Item = unknown> {
    * @default null
    */
   defaultValue?: LightboxItemValue | null;
-  /** Called when the viewer opens, closes or shows another item. */
-  onValueChange?: (value: LightboxItemValue | null) => void;
+  /**
+   * Called when the viewer opens, closes or shows another item, with why
+   * (`eventDetails.reason`). Call `eventDetails.cancel()` to keep the
+   * current item: a cancelled swipe or pull to dismiss springs back.
+   */
+  onValueChange?: (
+    value: LightboxItemValue | null,
+    eventDetails: LightboxRootChangeEventDetails,
+  ) => void;
+  /**
+   * Called when the viewer has finished opening or closing: the image has
+   * landed in the viewer, or back on the page.
+   */
+  onOpenChangeComplete?: (open: boolean) => void;
+  /**
+   * Where the image flies back to when the viewer closes, and where focus
+   * returns. When that trigger shows another image, the image turns into it
+   * on the way, and the trigger stays empty while the viewer is open.
+   * @default "active"
+   */
+  closeTarget?: LightboxCloseTarget;
+  /**
+   * Scrolls the page, hidden behind the viewer, to keep the trigger the image
+   * flies back to in view as the items change. Without it, closing on an
+   * item whose trigger is off screen fades the image out instead.
+   * @default true
+   */
+  scrollToTrigger?: boolean;
   /**
    * Links `Lightbox.Trigger`s placed outside the root, from
    * `Lightbox.createHandle()`.
@@ -145,6 +197,9 @@ export function LightboxRoot<Item = unknown>(
     value: valueProp,
     defaultValue = null,
     onValueChange,
+    onOpenChangeComplete,
+    closeTarget = "active",
+    scrollToTrigger = true,
     handle,
     loadMedia = loadLightboxMedia,
     maxScale = LIGHTBOX_ZOOM_SCALE.max,
@@ -164,11 +219,16 @@ export function LightboxRoot<Item = unknown>(
   if (value !== null && value !== lastValue) setLastValue(value);
   const shownValue = value ?? lastValue;
 
-  const [phase, setPhase] = React.useState(LightboxPhase.Closed);
+  const [phase, setPhase] = React.useState<LightboxPhase>("closed");
   const [pendingValue, setPendingValue] =
     React.useState<LightboxItemValue | null>(null);
-  const [flyingValue, setFlyingValue] =
-    React.useState<LightboxItemValue | null>(null);
+  // The trigger the image flies back to, kept empty while the viewer is open.
+  const [landingTrigger, setLandingTrigger] =
+    React.useState<HTMLElement | null>(null);
+  // The trigger the image flies from or lands on, hidden by the app meanwhile.
+  const [flyingTrigger, setFlyingTrigger] = React.useState<HTMLElement | null>(
+    null,
+  );
   const [controlsHidden, setControlsHidden] = React.useState(false);
   const [mediaSizes, setMediaSizes] = React.useState<
     ReadonlyMap<LightboxItemValue, LightboxMediaSize>
@@ -176,6 +236,8 @@ export function LightboxRoot<Item = unknown>(
 
   const phaseRef = useValueAsRef(phase);
   const openerRef = React.useRef<HTMLElement | null>(null);
+  // The item the viewer opened on, which the opener shows.
+  const openerValueRef = React.useRef<LightboxItemValue | null>(null);
   const triggersRef = React.useRef(
     new Map<LightboxItemValue, Set<HTMLElement>>(),
   );
@@ -189,7 +251,18 @@ export function LightboxRoot<Item = unknown>(
   >(() => new Set());
   const popupRef = React.useRef<HTMLElement | null>(null);
   const backdropRef = React.useRef<HTMLElement | null>(null);
-  const flightRef = React.useRef<Animation | null>(null);
+  const flightRef = React.useRef<LightboxFlight | null>(null);
+  // Where a flight that was stopped left the media, for the next to start from.
+  const interruptedRef = React.useRef<{
+    element: HTMLElement;
+    state: LightboxFlightState;
+  } | null>(null);
+  // The copy of a trigger flying in its place, until the trigger shows again.
+  const standInRef = React.useRef<HTMLElement | null>(null);
+  // How fast the pull that dismissed the viewer was going (px/ms).
+  const releaseVelocityRef = React.useRef<{ x: number; y: number } | null>(
+    null,
+  );
   const openFlightStartedRef = React.useRef(false);
   const trackTransitionRef = React.useRef<LightboxTrackTransition | null>(null);
   const openingTimeout = useTimeout();
@@ -218,15 +291,14 @@ export function LightboxRoot<Item = unknown>(
   // Which side the item shown came from: only while the viewer is open, so
   // opening on an item doesn't count as a move.
   const [directionIndex, setDirectionIndex] = React.useState(index);
-  const [activationDirection, setActivationDirection] = React.useState(
-    LightboxActivationDirection.None,
-  );
+  const [activationDirection, setActivationDirection] =
+    React.useState<LightboxActivationDirection>("none");
   if (index !== directionIndex) {
     setDirectionIndex(index);
     setActivationDirection(
-      open && phase !== LightboxPhase.Closed
+      open && phase !== "closed"
         ? getLightboxActivationDirection(index - directionIndex, direction)
-        : LightboxActivationDirection.None,
+        : "none",
     );
   }
 
@@ -255,19 +327,70 @@ export function LightboxRoot<Item = unknown>(
     return elements.values().next().value ?? null;
   });
 
-  const setValue = useStableCallback((nextValue: LightboxItemValue | null) => {
-    if (nextValue === value) return;
-    setValueState(nextValue);
-    onValueChange?.(nextValue);
-  });
+  /** Whether the item has a trigger on the page. */
+  const hasTrigger = (itemIndex: number): boolean => {
+    const itemValue = values[itemIndex];
+    return (
+      itemValue !== undefined && Boolean(findTrigger(itemValue)?.isConnected)
+    );
+  };
+
+  /**
+   * The trigger the image flies back to on close, and focus returns to, as
+   * `closeTarget` picks it, with the item it shows.
+   */
+  const findCloseTrigger = useStableCallback(
+    (): { element: HTMLElement; value: LightboxItemValue } | null => {
+      const opener = openerRef.current;
+      const openerValue = openerValueRef.current;
+      if (
+        closeTarget === "opener" &&
+        opener?.isConnected &&
+        openerValue !== null
+      )
+        return { element: opener, value: openerValue };
+      const targetIndex =
+        closeTarget === "nearest"
+          ? getLightboxNearestIndex(index, values.length, hasTrigger)
+          : index;
+      const targetValue = values[targetIndex];
+      const element =
+        targetValue === undefined ? null : findTrigger(targetValue);
+      return targetValue !== undefined && element?.isConnected
+        ? { element, value: targetValue }
+        : null;
+    },
+  );
+
+  /**
+   * Asks the app with `onValueChange`, then changes the value unless it
+   * cancelled. Returns whether it changed.
+   */
+  const setValue = useStableCallback(
+    (
+      nextValue: LightboxItemValue | null,
+      eventDetails: LightboxRootChangeEventDetails,
+    ): boolean => {
+      if (nextValue === value) return false;
+      onValueChange?.(nextValue, eventDetails);
+      if (eventDetails.isCanceled) return false;
+      setValueState(nextValue);
+      return true;
+    },
+  );
 
   const changeIndex = useStableCallback(
-    (nextIndex: number, transition: LightboxTrackTransition | null = null) => {
+    (
+      nextIndex: number,
+      eventDetails: LightboxRootChangeEventDetails,
+      transition: LightboxTrackTransition | null = null,
+    ): boolean => {
       const nextValue = values[nextIndex];
-      if (nextIndex === index || nextValue === undefined) return;
+      if (nextIndex === index || nextValue === undefined) return false;
+      if (!setValue(nextValue, eventDetails)) return false;
       zoom.reset();
       trackTransitionRef.current = transition;
-      setValue(nextValue);
+      return true;
     },
   );
 
@@ -283,24 +406,37 @@ export function LightboxRoot<Item = unknown>(
   );
 
   const openValue = useStableCallback(
-    async (nextValue: LightboxItemValue, trigger?: HTMLElement | null) => {
+    async (
+      nextValue: LightboxItemValue,
+      eventDetails: LightboxRootChangeEventDetails,
+    ) => {
       const nextIndex = values.indexOf(nextValue);
       const item = items[nextIndex];
       if (nextIndex === -1 || open || pendingValue !== null) return;
-      if (phaseRef.current !== LightboxPhase.Closed) return;
+      if (phaseRef.current !== "closed") return;
 
-      openerRef.current = trigger ?? findTrigger(nextValue);
+      const trigger = eventDetails.trigger;
+      openerRef.current =
+        trigger instanceof HTMLElement ? trigger : findTrigger(nextValue);
+      openerValueRef.current = nextValue;
       setPendingValue(nextValue);
       const size = await loadMedia(item as Item);
       if (size) setMediaSize(nextValue, size);
       setPendingValue(null);
-      setValue(nextValue);
+      setValue(nextValue, eventDetails);
     },
   );
 
-  const close = useStableCallback(() => {
-    if (open) setValue(null);
-  });
+  const close = useStableCallback(
+    (
+      eventDetails: LightboxRootChangeEventDetails,
+      velocity?: { x: number; y: number },
+    ): boolean => {
+      if (!open || !setValue(null, eventDetails)) return false;
+      releaseVelocityRef.current = velocity ?? null;
+      return true;
+    },
+  );
 
   /** Where the media sits at rest, without its zoom, drag or flight. */
   const getMediaBox = (entry: LightboxMediaEntry): LightboxRect => {
@@ -313,166 +449,320 @@ export function LightboxRoot<Item = unknown>(
     };
   };
 
-  /** Rect and corner radii of the item's trigger, when it's on screen. */
-  const getTriggerTarget = (itemValue: LightboxItemValue) => {
-    const trigger = findTrigger(itemValue);
+  /**
+   * Rect and corner radii of a trigger, when it can be seen: in the window,
+   * and not scrolled out of a list that clips it.
+   */
+  const getTriggerTarget = (trigger: HTMLElement | null) => {
     if (!trigger?.isConnected) return null;
     const win = ownerWindow(trigger);
     const rect = toLightboxRect(trigger);
-    const viewport = {
-      width: win.document.documentElement.clientWidth,
-      height: win.document.documentElement.clientHeight,
-    };
-    if (!isLightboxRectInViewport(rect, viewport)) return null;
+    if (!isLightboxRectVisible(rect, getLightboxVisibleArea(trigger)))
+      return null;
     // Each corner, so a tile rounded on one side only flies with that side rounded.
     const radii = getLightboxFlightRadii(win.getComputedStyle(trigger), rect);
     return { rect, radii };
   };
 
+  /** Scrolls the page, without animating, until the trigger is in view. */
+  const revealTrigger = (trigger: HTMLElement) => {
+    if (!scrollToTrigger || typeof trigger.scrollIntoView !== "function")
+      return;
+    trigger.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "instant",
+    });
+  };
+
+  /**
+   * Stops the running flight where it is, and keeps that state: the next
+   * flight starts from it instead of jumping to its own start.
+   */
   const stopFlight = () => {
-    flightRef.current?.cancel();
+    const flight = flightRef.current;
+    const animation = flight?.animations[0];
+    if (flight && animation) {
+      const time = Math.min(
+        1,
+        Math.max(0, Number(animation.currentTime ?? 0) / flight.duration),
+      );
+      interruptedRef.current = {
+        element: flight.element,
+        state: interpolateLightboxFlightState(
+          flight.from,
+          flight.to,
+          flight.easing(time),
+        ),
+      };
+    }
+    for (const running of flight?.animations ?? []) running.cancel();
+    standInRef.current?.remove();
+    standInRef.current = null;
     flightRef.current = null;
-    setFlyingValue(null);
+    setFlyingTrigger(null);
+  };
+
+  /**
+   * The flight variables before any flight, so transitions have them from the
+   * start. Never over a flight's: a ref can run again mid-flight.
+   */
+  const writeDefaultFlightVariables = (element: HTMLElement) => {
+    if (element.style.getPropertyValue(flightDuration)) return;
+    element.style.setProperty(flightDuration, `${LIGHTBOX_FLIGHT_DURATION}ms`);
+    element.style.setProperty(flightEasing, LIGHTBOX_FLIGHT_EASING);
+  };
+
+  /** Writes the flight's length and curve, for transitions that follow it. */
+  const writeFlightVariables = (duration: number, easing: string) => {
+    for (const element of [popupRef.current, backdropRef.current]) {
+      element?.style.setProperty(flightDuration, `${duration}ms`);
+      element?.style.setProperty(flightEasing, easing);
+    }
+  };
+
+  /**
+   * Flies the media in `box` from one state to another, sampled in screen
+   * space so its shape and corners change evenly, then calls `onFinish`.
+   */
+  const fly = (
+    element: HTMLElement,
+    box: LightboxRect,
+    from: LightboxFlightState,
+    to: LightboxFlightState,
+    easing: LightboxEasing,
+    onFinish: () => void,
+    /**
+     * `forwards` holds the last frame until the viewer unmounts (closing).
+     * Opening lets go, or its clip would cut off the zoom and the pull.
+     */
+    fill: FillMode,
+  ) => {
+    const duration = LIGHTBOX_FLIGHT_DURATION;
+    writeFlightVariables(
+      duration,
+      easing === FLIGHT_EASING
+        ? LIGHTBOX_FLIGHT_EASING
+        : formatLightboxLinearEasing(easing),
+    );
+    const flight: LightboxFlight = {
+      element,
+      from,
+      to,
+      easing,
+      duration,
+      animations: [],
+    };
+    flightRef.current = flight;
+    const animation = animateLightboxMedia(
+      element,
+      getLightboxFlightKeyframes(from, to, box, easing),
+      // The easing is in the keyframes.
+      { duration, easing: "linear", fill },
+      onFinish,
+    );
+    if (animation) flight.animations.push(animation);
+  };
+
+  /**
+   * Where the active media is on screen now, as a flight state: where a
+   * stopped flight left it, or where the pull to dismiss and the zoom leave
+   * it. The flight takes the drag (`translate` and `scale` on the box) and
+   * the zoom (`transform` on its `<img>`) over, and they're cleared.
+   */
+  const takeMediaState = (
+    entry: LightboxMediaEntry,
+    box: LightboxRect,
+  ): LightboxFlightState => {
+    const interrupted = interruptedRef.current;
+    interruptedRef.current = null;
+    zoom.stop();
+    const { element, zoomElement } = entry;
+    const [dragX = 0, dragY = 0] = element.style.translate
+      .split(" ")
+      .map((value) => parseFloat(value) || 0);
+    const dragScale = parseFloat(element.style.scale) || 1;
+    const current = zoom.getZoom();
+    element.style.translate = "";
+    element.style.scale = "";
+    if (zoomElement) zoomElement.style.transform = "";
+    if (interrupted?.element === element) return interrupted.state;
+    // The zoom is drawn inside the pulled box, both around its centre.
+    return getLightboxMovedState(
+      box,
+      dragX + dragScale * current.x,
+      dragY + dragScale * current.y,
+      dragScale * current.scale,
+    );
   };
 
   const finishOpening = useStableCallback(() => {
     openingTimeout.clear();
     flightRef.current = null;
-    setFlyingValue(null);
-    if (phaseRef.current === LightboxPhase.Opening)
-      setPhase(LightboxPhase.Open);
+    // Faded out by now: the image has taken its place.
+    standInRef.current?.remove();
+    standInRef.current = null;
+    setFlyingTrigger(null);
+    if (phaseRef.current !== "opening") return;
+    setPhase("open");
+    onOpenChangeComplete?.(true);
   });
 
   const finishClosing = useStableCallback(() => {
     flightRef.current = null;
-    setFlyingValue(null);
+    interruptedRef.current = null;
+    setFlyingTrigger(null);
     zoom.reset();
-    setPhase(LightboxPhase.Closed);
+    setPhase("closed");
+    onOpenChangeComplete?.(false);
   });
 
   /**
-   * What flies for the active item: its `Lightbox.Media` box, with whatever
-   * it shows (the image, a video, an error message). `box` is where it sits
-   * at rest, and `transform` where it is now. The flight takes the close
-   * drag (`translate` and `scale` on the box) and the zoom (`transform` on
-   * its `<img>`) over as one `transform` on the box, and they're cleared.
+   * Flies a copy of `trigger` along with the media, on the same path, and
+   * fades it in over the media (closing) or out of it (opening): the media
+   * turns into the trigger's look, or grows out of it.
    */
-  const getFlightTarget = (): {
-    element: HTMLElement;
-    box: LightboxRect;
-    transform: string;
-  } | null => {
-    const entry = getActiveMedia();
-    if (!entry) return null;
-    zoom.stop();
-    const { element, zoomElement } = entry;
-    const { translate, scale } = element.style;
-    const zoomTransform = zoomElement?.style.transform ?? "";
-    element.style.translate = "";
-    element.style.scale = "";
-    if (zoomElement) zoomElement.style.transform = "";
-    const dragTransform = translate
-      ? `translate(${translate.split(" ").join(", ")}) scale(${scale || 1})`
-      : "";
-    const transform = [dragTransform, zoomTransform]
-      .filter((part) => part !== "" && part !== "none")
-      .join(" ");
-    return {
-      element,
-      box: getMediaBox(entry),
-      transform: transform || "none",
-    };
+  const flyStandIn = (
+    trigger: HTMLElement,
+    from: LightboxFlightState,
+    to: LightboxFlightState,
+    easing: LightboxEasing,
+    fadeOut: boolean,
+  ) => {
+    const flight = flightRef.current;
+    const popup = popupRef.current;
+    if (!flight || !popup) return;
+    const standIn = createLightboxStandIn(trigger);
+    popup.append(standIn);
+    standInRef.current = standIn;
+    const animation = animateLightboxMedia(
+      standIn,
+      getLightboxStandInKeyframes(
+        from,
+        to,
+        easing,
+        LIGHTBOX_CROSSFADE_WINDOW,
+        fadeOut,
+      ),
+      { duration: flight.duration, easing: "linear", fill: "forwards" },
+      () => {},
+    );
+    if (animation) flight.animations.push(animation);
   };
 
-  /** Starts the open flight once the active media is laid out in the viewer. */
+  /**
+   * Starts the open flight once the active media is laid out in the viewer:
+   * from its trigger, from where a close flight was stopped, or fading in.
+   * What flies is the `Lightbox.Media` box, with whatever it shows (the
+   * image, a video, an error message).
+   */
   const tryStartOpenFlight = useStableCallback(() => {
-    if (phaseRef.current !== LightboxPhase.Opening) return;
+    if (phaseRef.current !== "opening") return;
     if (openFlightStartedRef.current) return;
     if (activeValue === undefined) return;
-    const flight = getFlightTarget();
-    if (!flight) return;
+    const entry = getActiveMedia();
+    if (!entry) return;
     openFlightStartedRef.current = true;
+    const box = getMediaBox(entry);
+    const interrupted = interruptedRef.current?.element === entry.element;
+    const current = takeMediaState(entry, box);
 
-    const win = ownerWindow(flight.element);
-    if (prefersLightboxReducedMotion(win)) {
+    if (prefersLightboxReducedMotion(ownerWindow(entry.element))) {
       finishOpening();
       return;
     }
-    const target = getTriggerTarget(activeValue);
-    const keyframes: Keyframe[] = target
-      ? [
-          getLightboxFlightKeyframe(target.rect, flight.box, target.radii),
-          LIGHTBOX_FLIGHT_REST,
-        ]
-      : [FADED_OUT, FADED_IN];
-    if (target) setFlyingValue(activeValue);
-    flightRef.current = animateLightboxMedia(
-      flight.element,
-      keyframes,
-      finishOpening,
-    );
+    const trigger = findTrigger(activeValue);
+    const target = interrupted ? null : getTriggerTarget(trigger);
+    let from = current;
+    if (target) from = { rect: target.rect, radii: target.radii, opacity: 1 };
+    else if (!interrupted) from = getLightboxFadedState(box);
+    if (target) setFlyingTrigger(trigger);
+    const to = getLightboxRestState(box);
+    fly(entry.element, box, from, to, FLIGHT_EASING, finishOpening, "none");
+    // A trigger that shows something else (an avatar, a cover): the image
+    // grows out of its look.
+    if (target && trigger?.hasAttribute("data-crossfade"))
+      flyStandIn(trigger, from, to, FLIGHT_EASING, true);
   });
 
   const startCloseFlight = () => {
-    const flight = activeValue === undefined ? null : getFlightTarget();
-    if (!flight || activeValue === undefined) {
+    const entry = getActiveMedia();
+    const velocity = releaseVelocityRef.current;
+    releaseVelocityRef.current = null;
+    if (!entry || activeValue === undefined) {
       finishClosing();
       return;
     }
-    const win = ownerWindow(flight.element);
-    if (prefersLightboxReducedMotion(win)) {
+    const box = getMediaBox(entry);
+    // Starts from where the image is now: mid-flight, zoomed or pulled.
+    const from = takeMediaState(entry, box);
+    if (prefersLightboxReducedMotion(ownerWindow(entry.element))) {
       finishClosing();
       return;
     }
-    // Starts from where it is now: zoomed, panned or dragged.
-    const current = flight.transform;
-    const target = getTriggerTarget(activeValue);
-    const keyframes: Keyframe[] = target
-      ? [
-          { transform: current, clipPath: "inset(0px 0px round 0px)" },
-          getLightboxFlightKeyframe(target.rect, flight.box, target.radii),
-        ]
-      : [
-          { ...FADED_IN, transform: current },
-          { ...FADED_OUT, transform: current },
-        ];
-    if (target) setFlyingValue(activeValue);
-    flightRef.current = animateLightboxMedia(
-      flight.element,
-      keyframes,
-      finishClosing,
-      // Holds the last frame until the viewer unmounts.
-      "forwards",
-    );
+    const trigger = findCloseTrigger();
+    if (trigger) revealTrigger(trigger.element);
+    const target = getTriggerTarget(trigger?.element ?? null);
+    const to: LightboxFlightState = target
+      ? { rect: target.rect, radii: target.radii, opacity: 1 }
+      : getLightboxFadedState(from.rect);
+    // The trigger is hidden while the image flies to it, so the image lands
+    // in an empty slot.
+    if (target && trigger) setFlyingTrigger(trigger.element);
+    const easing = velocity
+      ? getLightboxReleaseEasing(from, to, velocity, LIGHTBOX_FLIGHT_DURATION)
+      : FLIGHT_EASING;
+    fly(entry.element, box, from, to, easing, finishClosing, "forwards");
+    // A trigger that shows something else: another item (a cover, a "+3"
+    // tile), or with `crossfade` (an avatar). The image turns into its look
+    // on the way, and lands looking exactly like it.
+    if (
+      target &&
+      trigger &&
+      (trigger.value !== activeValue ||
+        trigger.element.hasAttribute("data-crossfade"))
+    )
+      flyStandIn(trigger.element, from, to, easing, false);
   };
 
   // Turns `open` into the animation phases. Runs before paint, so the close
   // flight measures the image where the user last saw it.
   useIsoLayoutEffect(() => {
-    if (
-      open &&
-      (phase === LightboxPhase.Closed || phase === LightboxPhase.Closing)
-    ) {
+    if (open && (phase === "closed" || phase === "closing")) {
       stopFlight();
       zoom.reset();
       openFlightStartedRef.current = false;
       setControlsHidden(false);
-      setActivationDirection(LightboxActivationDirection.None);
-      setPhase(LightboxPhase.Opening);
+      setActivationDirection("none");
+      setPhase("opening");
       openingTimeout.start(OPENING_FALLBACK_DELAY, finishOpening);
-    } else if (
-      !open &&
-      (phase === LightboxPhase.Open || phase === LightboxPhase.Opening)
-    ) {
+    } else if (!open && (phase === "open" || phase === "opening")) {
       stopFlight();
       openingTimeout.clear();
-      setPhase(LightboxPhase.Closing);
+      setPhase("closing");
       startCloseFlight();
     }
   }, [open, phase]);
 
+  // Where the image will land follows the item shown, from the opening
+  // flight to the end of the closing one. Before paint, so the slot never
+  // shows filled for a frame.
   useIsoLayoutEffect(() => {
-    if (phase !== LightboxPhase.Opening) return undefined;
+    setLandingTrigger(
+      phase === "closed" ? null : (findCloseTrigger()?.element ?? null),
+    );
+  }, [phase, activeValue, closeTarget, findCloseTrigger]);
+
+  // Landed: the copy goes in the commit that shows the trigger again, before
+  // paint, so no frame shows the slot empty.
+  useIsoLayoutEffect(() => {
+    if (phase !== "closed") return;
+    standInRef.current?.remove();
+    standInRef.current = null;
+  }, [phase]);
+
+  useIsoLayoutEffect(() => {
+    if (phase !== "opening") return undefined;
     tryStartOpenFlight();
     // A `Lightbox.Media` registers before the next frame. Without one there
     // is nothing to fly, and the viewer is open at once.
@@ -482,35 +772,66 @@ export function LightboxRoot<Item = unknown>(
     return () => AnimationFrame.cancel(frame);
   }, [phase, tryStartOpenFlight, finishOpening]);
 
+  // As the items change, the page behind the viewer scrolls to keep the
+  // trigger to fly back to in view, so it's on screen when the viewer closes.
+  useIsoLayoutEffect(() => {
+    if (!open || phase !== "open") return;
+    const trigger = findCloseTrigger();
+    if (trigger) revealTrigger(trigger.element);
+    // When the item shown changes, or the viewer has just opened.
+  }, [open, phase, activeValue]);
+
   // The open item was removed: show its neighbour, or close when none is left.
   React.useEffect(() => {
     if (!open || foundIndex !== -1) return;
-    if (activeValue === undefined) close();
-    else setValue(activeValue);
+    const eventDetails = createLightboxChangeEventDetails("missing");
+    if (activeValue === undefined) close(eventDetails);
+    else setValue(activeValue, eventDetails);
   }, [open, foundIndex, activeValue, close, setValue]);
 
-  const goTo = useStableCallback((nextIndex: number) => {
-    const target = clampLightboxIndex(nextIndex, items.length);
-    // Slides in; `Lightbox.Viewport` turns a longer jump into a one-item slide.
-    changeIndex(target, { step: target - index, offset: 0 });
-  });
+  const goTo = useStableCallback(
+    (
+      nextIndex: number,
+      eventDetails: LightboxRootChangeEventDetails,
+    ): boolean => {
+      const target = clampLightboxIndex(nextIndex, items.length);
+      // Slides in; `Lightbox.Viewport` turns a longer jump into a one-item slide.
+      return changeIndex(target, eventDetails, {
+        step: target - index,
+        offset: 0,
+      });
+    },
+  );
 
-  const stepIndex = useStableCallback((step: number, fromOffset: number) => {
-    const target = clampLightboxIndex(index + step, items.length);
-    if (target === index) return;
-    changeIndex(target, { step: target - index, offset: fromOffset });
-  });
+  const stepIndex = useStableCallback(
+    (
+      step: number,
+      fromOffset: number,
+      eventDetails: LightboxRootChangeEventDetails,
+    ): boolean => {
+      const target = clampLightboxIndex(index + step, items.length);
+      if (target === index) return false;
+      return changeIndex(target, eventDetails, {
+        step: target - index,
+        offset: fromOffset,
+      });
+    },
+  );
 
   // Stable, so the elements' refs only run when they mount and unmount. The
   // CSS variables are there from the start, at rest.
   const setPopupElement = useStableCallback((element: HTMLElement | null) => {
     popupRef.current = element;
-    if (element) zoom.refresh();
+    if (!element) return;
+    zoom.refresh();
+    writeDefaultFlightVariables(element);
   });
   const setBackdropElement = useStableCallback(
     (element: HTMLElement | null) => {
       backdropRef.current = element;
-      if (element) zoom.refresh();
+      if (!element) return;
+      zoom.refresh();
+      writeDefaultFlightVariables(element);
     },
   );
 
@@ -528,11 +849,11 @@ export function LightboxRoot<Item = unknown>(
 
   // Written to the elements directly: it changes at the start and end of each
   // gesture, and the popup shouldn't re-render for it.
-  const setDragging = useStableCallback((dragging: boolean) => {
+  const setSwiping = useStableCallback((swiping: boolean) => {
     for (const element of [popupRef.current, backdropRef.current]) {
       if (!element) continue;
-      if (dragging) element.setAttribute("data-dragging", "");
-      else element.removeAttribute("data-dragging");
+      if (swiping) element.setAttribute("data-swiping", "");
+      else element.removeAttribute("data-swiping");
     }
   });
 
@@ -563,9 +884,10 @@ export function LightboxRoot<Item = unknown>(
     );
   };
 
+  // Focus returns where the image lands, else to the opener.
   const getFinalFocus = useStableCallback(() => {
-    const target = activeValue === undefined ? null : findTrigger(activeValue);
-    if (target?.isConnected) return target;
+    const target = findCloseTrigger();
+    if (target) return target.element;
     return openerRef.current?.isConnected ? openerRef.current : null;
   });
 
@@ -621,7 +943,8 @@ export function LightboxRoot<Item = unknown>(
       open,
       phase,
       pendingValue,
-      flyingValue,
+      flyingTrigger,
+      landingTrigger,
       zoomed,
       controlsHidden,
       hasPrevious: index > 0,
@@ -635,8 +958,8 @@ export function LightboxRoot<Item = unknown>(
       openValue,
       close,
       goTo,
-      goToPrevious: () => goTo(index - 1),
-      goToNext: () => goTo(index + 1),
+      goToPrevious: (eventDetails) => goTo(index - 1, eventDetails),
+      goToNext: (eventDetails) => goTo(index + 1, eventDetails),
       // Steps from where a running zoom ends, so quick presses add up.
       zoomIn: () =>
         zoomTo(zoom.getTargetZoom().scale + LIGHTBOX_ZOOM_SCALE.step),
@@ -664,7 +987,7 @@ export function LightboxRoot<Item = unknown>(
       animateZoom: zoom.animateZoom,
       setDismiss: zoom.setDismiss,
       animateDismiss: zoom.animateDismiss,
-      setDragging,
+      setSwiping,
       setSwipe,
       setSwipeStrength,
       stepIndex,
@@ -681,7 +1004,8 @@ export function LightboxRoot<Item = unknown>(
       open,
       phase,
       pendingValue,
-      flyingValue,
+      flyingTrigger,
+      landingTrigger,
       zoomed,
       controlsHidden,
       minScale,
@@ -713,10 +1037,22 @@ export function LightboxRoot<Item = unknown>(
     <LightboxRootContext value={contextValue}>
       <LightboxRootZoomContext value={zoomValue}>
         <Dialog.Root
-          // Stays open while the image flies back, then lets Base UI unmount it.
-          open={open || phase === LightboxPhase.Closing}
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) close();
+          // Stays open until the image has flown back, then lets Base UI
+          // unmount it. Not `phase === Closing`: in the render where `value`
+          // becomes `null` the phase is still `Open`, and the dialog would
+          // close and reopen around the close flight.
+          open={open || phase !== "closed"}
+          onOpenChange={(nextOpen, eventDetails) => {
+            if (nextOpen) return;
+            // Escape, an outside press or `Lightbox.Close`, with Base UI's reason.
+            const closed = close(
+              createLightboxChangeEventDetails(
+                eventDetails.reason as LightboxRootChangeEventReason,
+                eventDetails.event,
+                eventDetails.trigger,
+              ),
+            );
+            if (!closed) eventDetails.cancel();
           }}
         >
           {children}

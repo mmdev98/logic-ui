@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
+
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
   type LightboxActionProps,
   type LightboxActionState,
@@ -21,7 +23,14 @@ export function LightboxNext(props: LightboxNextProps): React.ReactElement {
   return useLightboxAction({
     props,
     disabled: !hasNext,
-    onAction: goToNext,
+    onAction: (event) =>
+      goToNext(
+        createLightboxChangeEventDetails(
+          "next-press",
+          event.nativeEvent,
+          event.currentTarget,
+        ),
+      ),
     label: "Next image",
     shortcut: "ArrowRight",
   });

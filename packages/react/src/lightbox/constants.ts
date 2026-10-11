@@ -19,6 +19,15 @@ export const LIGHTBOX_KEYBOARD_PAN_STEP = 80;
 export const LIGHTBOX_FLIGHT_DURATION = 350;
 export const LIGHTBOX_FLIGHT_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
 
+/**
+ * Part of the way, 0 to 1, over which the image turns into a trigger that
+ * shows something else (another item, or `crossfade`): a copy of the trigger
+ * fades in over it near the end of the way home, when the two are close in
+ * size, so neither is seen blown up. The flight that opens mirrors it: the
+ * copy is gone by half the way.
+ */
+export const LIGHTBOX_CROSSFADE_WINDOW = { start: 0.5, end: 0.95 };
+
 /** Time a swipe, zoom or drag takes to settle after release (ms). */
 export const LIGHTBOX_SETTLE_DURATION = 300;
 
@@ -41,7 +50,7 @@ export const LIGHTBOX_SWIPE_STRENGTH = {
   min: 0.1,
 } as const;
 
-/** A vertical drag closes the viewer past this share of the height, or this speed (px/ms). */
+/** A vertical pull dismisses the viewer past this share of the height, or this speed (px/ms). */
 export const LIGHTBOX_DISMISS_DISTANCE = 0.15;
 export const LIGHTBOX_DISMISS_VELOCITY = 0.5;
 
@@ -51,6 +60,6 @@ export const LIGHTBOX_DOUBLE_TAP_DISTANCE = 30;
 
 /**
  * CSS variable set on `Lightbox.Popup` and `Lightbox.Backdrop` while the image
- * is dragged to close: 0 at rest, 1 at the closing distance.
+ * is pulled to dismiss: 0 at rest, 1 at the closing distance.
  */
 export const LIGHTBOX_DISMISS_PROGRESS_VARIABLE = "--lightbox-dismiss-progress";

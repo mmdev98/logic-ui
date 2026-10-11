@@ -40,11 +40,11 @@ export interface UseLightboxZoomResult {
   setZoom: (zoom: LightboxZoom) => void;
   animateZoom: (zoom: LightboxZoom, options?: { clamp?: boolean }) => void;
   setDismiss: (dismiss: LightboxDismiss, progress: number) => void;
-  /** Animates the close drag to `dismiss`, then calls `onComplete`. */
+  /** Animates the pull to dismiss to `dismiss`, then calls `onComplete`. */
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
   /** Puts the active image back at rest at once, without animation. */
   reset: () => void;
-  /** Stops the running zoom and close-drag animations where they are, writing nothing. */
+  /** Stops the running zoom and pull animations where they are, writing nothing. */
   stop: () => void;
   /** Writes the CSS variables again, to a popup or backdrop that just mounted. */
   refresh: () => void;
@@ -55,7 +55,7 @@ function mix(from: number, to: number, progress: number): number {
 }
 
 /**
- * Zoom, pan and close-drag of the active media. The values live in refs and
+ * Zoom, pan and pull to dismiss of the active media. The values live in refs and
  * are written to the elements directly, so a gesture frame only re-renders
  * the parts that show the scale: the zoom to the media's `<img>`, the close
  * drag to the `Lightbox.Media` box, so all of its content moves with it.
@@ -73,7 +73,7 @@ export function useLightboxZoom(
   const targetZoomRef = React.useRef<LightboxZoom | null>(null);
   const stopDismissRef = React.useRef<(() => void) | null>(null);
 
-  // The drag to close and the zoom as CSS variables on the popup and the
+  // The pull to dismiss and the zoom as CSS variables on the popup and the
   // backdrop, so the app's styles can follow them frame by frame.
   const writeVariables = useStableCallback(() => {
     const { scale: zoomScaleValue } = zoomRef.current;

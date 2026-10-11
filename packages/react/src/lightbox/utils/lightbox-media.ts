@@ -1,4 +1,4 @@
-import { type LightboxMediaSize, LightboxMediaStatus } from "../types";
+import { type LightboxMediaSize, type LightboxMediaStatus } from "../types";
 
 /** Tags `Lightbox.Media` fits, measures and listens to. */
 const MEDIA_TAGS = new Set(["IMG", "VIDEO", "IFRAME"]);
@@ -76,20 +76,16 @@ export function getLightboxMediaNaturalSize(
 export function getLightboxMediaStatus(
   element: HTMLElement | null,
 ): LightboxMediaStatus {
-  if (!element) return LightboxMediaStatus.Loaded;
+  if (!element) return "loaded";
   if (element.tagName === "IMG") {
     const image = element as HTMLImageElement;
-    return image.complete && image.naturalWidth > 0
-      ? LightboxMediaStatus.Loaded
-      : LightboxMediaStatus.Loading;
+    return image.complete && image.naturalWidth > 0 ? "loaded" : "loading";
   }
   if (element.tagName === "VIDEO") {
     const video = element as HTMLVideoElement;
-    if (video.error) return LightboxMediaStatus.Error;
+    if (video.error) return "error";
     // `HAVE_CURRENT_DATA`: the first frame can be shown.
-    return video.readyState >= 2
-      ? LightboxMediaStatus.Loaded
-      : LightboxMediaStatus.Loading;
+    return video.readyState >= 2 ? "loaded" : "loading";
   }
-  return LightboxMediaStatus.Loading;
+  return "loading";
 }

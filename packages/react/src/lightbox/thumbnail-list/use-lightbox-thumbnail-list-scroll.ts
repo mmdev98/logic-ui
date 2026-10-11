@@ -21,7 +21,7 @@ export interface UseLightboxThumbnailListScrollResult {
   /** Whether thumbnails are hidden past the end of the strip. */
   overflowEnd: boolean;
   /** Whether the mouse drags the strip. */
-  dragging: boolean;
+  swiping: boolean;
   props: React.HTMLAttributes<HTMLDivElement>;
 }
 
@@ -51,7 +51,7 @@ export function useLightboxThumbnailListScroll(
   const suppressClickRef = React.useRef(false);
   const centredOnceRef = React.useRef(false);
   const [overflow, setOverflow] = React.useState({ start: false, end: false });
-  const [dragging, setDragging] = React.useState(false);
+  const [swiping, setSwiping] = React.useState(false);
 
   const updateOverflow = useStableCallback(() => {
     const strip = ref.current;
@@ -134,7 +134,7 @@ export function useLightboxThumbnailListScroll(
     if (!drag.moved) return;
     // The click that ends a drag doesn't show the thumbnail under the pointer.
     suppressClickRef.current = true;
-    setDragging(false);
+    setSwiping(false);
     if (event.currentTarget.hasPointerCapture?.(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
   };
@@ -159,7 +159,7 @@ export function useLightboxThumbnailListScroll(
       if (!drag.moved) {
         if (Math.abs(delta) < LIGHTBOX_DRAG_THRESHOLD) return;
         drag.moved = true;
-        setDragging(true);
+        setSwiping(true);
         strip.setPointerCapture?.(event.pointerId);
       }
       if (horizontal) strip.scrollLeft = drag.startScroll - delta;
@@ -185,7 +185,7 @@ export function useLightboxThumbnailListScroll(
     ref,
     overflowStart: overflow.start,
     overflowEnd: overflow.end,
-    dragging,
+    swiping,
     props,
   };
 }

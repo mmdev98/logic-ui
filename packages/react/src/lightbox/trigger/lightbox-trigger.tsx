@@ -9,22 +9,27 @@ import {
   type LightboxRootContextValue,
   useLightboxRootContextOptional,
 } from "../root/lightbox-root-context";
-import { LightboxPhase, type LightboxItemValue } from "../types";
+import { type LightboxItemValue } from "../types";
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import { useLightboxElementRef } from "../use-lightbox-element-ref";
 
 export type LightboxTriggerState = {
   /** Whether its image loads before the viewer opens. */
   pending: boolean;
-  /** Whether its image flies to or from the viewer. Hide the trigger meanwhile. */
+  /** Whether the image flies from it or back to it. Hide the trigger meanwhile. */
   flying: boolean;
   /** Whether another trigger's image is loading. */
   disabled: boolean;
   /**
-   * Whether the viewer shows its item, from the start of the opening flight
-   * to the end of the closing one. Hide the thumbnail meanwhile and keep its
-   * space (`visibility: hidden`): the image looks like it left its slot.
+   * Whether the image will fly back to it when the viewer closes: the
+   * trigger of the item shown, or the one `closeTarget` picks. From the
+   * start of the opening flight to the end of the closing one. Hide the
+   * thumbnail meanwhile and keep its space (`visibility: hidden`): the image
+   * looks like it left its slot, and lands in an empty one.
    */
   popupOpen: boolean;
+  /** Whether the image crossfades with it during its flights. */
+  crossfade: boolean;
 };
 
 export interface LightboxTriggerProps extends useRender.ComponentProps<
@@ -38,6 +43,14 @@ export interface LightboxTriggerProps extends useRender.ComponentProps<
    * `Lightbox.createHandle()`.
    */
   handle?: LightboxHandle;
+  /**
+   * Whether it shows something other than the media it opens: an avatar, a
+   * cover, an icon. The image then crossfades with a copy of it during the
+   * flights, growing out of its look and turning back into it on the way
+   * home. A trigger `closeTarget` picks for another item always crossfades.
+   * @default false
+   */
+  crossfade?: boolean;
 }
 
 function subscribeToNothing(): () => void {
@@ -71,14 +84,23 @@ function useLightboxTriggerRoot(
 /**
  * Opens the viewer on one item. The image flies from the trigger to the
  * viewer and back. Put the thumbnail inside it, or lay it over the thumbnail.
- * It has `data-popup-open` while the viewer shows its item: hide it then,
- * keeping its space. When `value` matches no item, only the children render,
+ * It has `data-popup-open` while the image will fly back to it (the item
+ * shown is its own, or `closeTarget` picks it): hide it then, keeping its
+ * space, so the image always lands in an empty slot. When `value` matches no item, only the children render,
  * without the button. Renders a `<button>` element.
  */
 export function LightboxTrigger(
   props: LightboxTriggerProps,
 ): React.ReactElement | null {
-  const { value, handle, render, ref, children, ...elementProps } = props;
+  const {
+    value,
+    handle,
+    crossfade = false,
+    render,
+    ref,
+    children,
+    ...elementProps
+  } = props;
 
   const root = useLightboxTriggerRoot(handle);
   const index = root ? root.values.indexOf(value) : -1;
@@ -88,19 +110,26 @@ export function LightboxTrigger(
     exists ? value : undefined,
     root?.registerTrigger ?? registerNothing,
   );
-  const mergedRef = useMergedRefs(ref, registerRef);
+  // Its own element: of several triggers of an item, only the one the image
+  // flies from or lands on is flying.
+  const [triggerElement, setTriggerElement] =
+    React.useState<HTMLElement | null>(null);
+  const handleElement = React.useCallback(
+    (node: HTMLElement | null) => setTriggerElement(node),
+    [],
+  );
+  const mergedRef = useMergedRefs(ref, registerRef, handleElement);
 
   const pending = root?.pendingValue === value;
-  const flying = root?.flyingValue === value;
+  const flying =
+    triggerElement !== null && root?.flyingTrigger === triggerElement;
   const disabled = (root?.pendingValue ?? null) !== null;
   const popupOpen =
-    root !== null &&
-    root.phase !== LightboxPhase.Closed &&
-    root.activeValue === value;
+    triggerElement !== null && root?.landingTrigger === triggerElement;
 
   const state: LightboxTriggerState = React.useMemo(
-    () => ({ pending, flying, disabled, popupOpen }),
-    [pending, flying, disabled, popupOpen],
+    () => ({ pending, flying, disabled, popupOpen, crossfade }),
+    [pending, flying, disabled, popupOpen, crossfade],
   );
 
   const element = useRender({
@@ -111,6 +140,9 @@ export function LightboxTrigger(
     // Named like Base UI's triggers: `data-popup-open`.
     stateAttributesMapping: {
       popupOpen: (isOpen) => (isOpen ? { "data-popup-open": "" } : null),
+      // The root reads it on the element, to know whether to crossfade.
+      crossfade: (isCrossfade) =>
+        isCrossfade ? { "data-crossfade": "" } : null,
     },
     enabled: exists,
     props: mergeProps<"button">(
@@ -125,7 +157,14 @@ export function LightboxTrigger(
         "aria-disabled": disabled || undefined,
         onClick: (event) => {
           if (disabled || !root) return;
-          void root.openValue(value, event.currentTarget);
+          void root.openValue(
+            value,
+            createLightboxChangeEventDetails(
+              "trigger-press",
+              event.nativeEvent,
+              event.currentTarget,
+            ),
+          );
         },
         children,
       },

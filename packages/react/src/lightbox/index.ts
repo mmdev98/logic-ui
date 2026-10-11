@@ -10,6 +10,7 @@ export * as LightboxNextDataAttributes from "./next/lightbox-next-data-attribute
 export * as LightboxPopupCssVars from "./popup/lightbox-popup-css-vars";
 export * as LightboxPopupDataAttributes from "./popup/lightbox-popup-data-attributes";
 export * as LightboxPreviousDataAttributes from "./previous/lightbox-previous-data-attributes";
+export * as LightboxSlideCssVars from "./slide/lightbox-slide-css-vars";
 export * as LightboxSlideDataAttributes from "./slide/lightbox-slide-data-attributes";
 export * as LightboxThumbnailDataAttributes from "./thumbnail/lightbox-thumbnail-data-attributes";
 export * as LightboxThumbnailIndicatorCssVars from "./thumbnail-indicator/lightbox-thumbnail-indicator-css-vars";
@@ -141,10 +142,13 @@ export {
 } from "./zoom-value/lightbox-zoom-value";
 export type { LightboxTransitionStatus } from "./lightbox-state-attributes";
 export {
-  LightboxActivationDirection,
-  LightboxMediaStatus,
-  LightboxPhase,
+  type LightboxActivationDirection,
+  type LightboxCloseTarget,
+  type LightboxMediaStatus,
+  type LightboxPhase,
+  type LightboxRootChangeEventReason,
   type LightboxItemValue,
   type LightboxMediaSize,
+  type LightboxRootChangeEventDetails,
 } from "./types";
 export { loadLightboxMedia } from "./utils/lightbox-items";

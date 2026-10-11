@@ -6,8 +6,9 @@ import {
   type LightboxDismiss,
   type LightboxMediaLayout,
   type LightboxMediaSize,
-  LightboxPhase,
+  type LightboxPhase,
   type LightboxItemValue,
+  type LightboxRootChangeEventDetails,
   type LightboxZoom,
 } from "../types";
 
@@ -22,7 +23,7 @@ export type LightboxTrackTransition = {
 
 /** A media registered by `Lightbox.Media`, for gestures and flights. */
 export type LightboxMediaEntry = {
-  /** The `Lightbox.Media` box: it flies and follows the drag to close. */
+  /** The `Lightbox.Media` box: it flies and follows the pull to dismiss. */
   element: HTMLElement;
   /** Its `<img>`, which zooms and pans, or `null` when the media can't zoom. */
   zoomElement: HTMLElement | null;
@@ -51,8 +52,13 @@ export interface LightboxRootContextValue {
   phase: LightboxPhase;
   /** Value of the item whose image loads before the viewer opens. */
   pendingValue: LightboxItemValue | null;
-  /** Item whose image flies between its trigger and the viewer. */
-  flyingValue: LightboxItemValue | null;
+  /** The trigger the image flies from or lands on, while it flies. */
+  flyingTrigger: HTMLElement | null;
+  /**
+   * The trigger the image flies back to when the viewer closes, as
+   * `closeTarget` picks it, while the viewer is open: its slot stays empty.
+   */
+  landingTrigger: HTMLElement | null;
   /** Whether the active image is zoomed in. */
   zoomed: boolean;
   /** Whether a tap hid the controls (caption, buttons). */
@@ -69,15 +75,26 @@ export interface LightboxRootContextValue {
   id: string;
   /** The `Lightbox.ThumbnailList`, when there is one. */
   thumbnailList: LightboxThumbnailListEntry | null;
-  /** Loads the item's image, then opens the viewer on it. The image flies from `trigger`, and focus returns to it on close. */
+  /**
+   * Loads the item's image, then opens the viewer on it. The image flies from
+   * `eventDetails.trigger` (else the item's trigger), and focus returns to it on close.
+   */
   openValue: (
     value: LightboxItemValue,
-    trigger?: HTMLElement | null,
+    eventDetails: LightboxRootChangeEventDetails,
   ) => Promise<void>;
-  close: () => void;
-  goTo: (index: number) => void;
-  goToPrevious: () => void;
-  goToNext: () => void;
+  // Each asks `onValueChange` first, and returns whether the item changed.
+  /** `velocity`: of the pull that dismissed it (px/ms), which the flight starts with. */
+  close: (
+    eventDetails: LightboxRootChangeEventDetails,
+    velocity?: { x: number; y: number },
+  ) => boolean;
+  goTo: (
+    index: number,
+    eventDetails: LightboxRootChangeEventDetails,
+  ) => boolean;
+  goToPrevious: (eventDetails: LightboxRootChangeEventDetails) => boolean;
+  goToNext: (eventDetails: LightboxRootChangeEventDetails) => boolean;
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
@@ -109,16 +126,20 @@ export interface LightboxRootContextValue {
   /** Animates to a zoom; `clamp` first brings it in bounds. */
   animateZoom: (zoom: LightboxZoom, options?: { clamp?: boolean }) => void;
   setDismiss: (dismiss: LightboxDismiss, progress: number) => void;
-  /** Animates the close drag to `dismiss`, then calls `onComplete`. */
+  /** Animates the pull to dismiss to `dismiss`, then calls `onComplete`. */
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
-  /** Sets `data-dragging` on the popup and the backdrop, so the app can turn transitions off. */
-  setDragging: (dragging: boolean) => void;
+  /** Sets `data-swiping` on the popup and the backdrop, so the app can turn transitions off. */
+  setSwiping: (swiping: boolean) => void;
   /** Writes how far the slides moved, in px on screen and as a share of a slide, on the popup. */
   setSwipe: (movementX: number, progress: number) => void;
   /** Writes the strength of a released swipe, 0.1 to 1, on the popup. */
   setSwipeStrength: (strength: number) => void;
   /** Moves the active item by `step` after a swipe left the track `fromOffset` px away. */
-  stepIndex: (step: number, fromOffset: number) => void;
+  stepIndex: (
+    step: number,
+    fromOffset: number,
+    eventDetails: LightboxRootChangeEventDetails,
+  ) => boolean;
   /** How the track should slide to the new index, read once by `Lightbox.Viewport`. */
   takeTrackTransition: () => LightboxTrackTransition | null;
 }

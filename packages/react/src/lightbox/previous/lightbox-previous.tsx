@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
+
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
   type LightboxActionProps,
   type LightboxActionState,
@@ -23,7 +25,14 @@ export function LightboxPrevious(
   return useLightboxAction({
     props,
     disabled: !hasPrevious,
-    onAction: goToPrevious,
+    onAction: (event) =>
+      goToPrevious(
+        createLightboxChangeEventDetails(
+          "previous-press",
+          event.nativeEvent,
+          event.currentTarget,
+        ),
+      ),
     label: "Previous image",
     shortcut: "ArrowLeft",
   });

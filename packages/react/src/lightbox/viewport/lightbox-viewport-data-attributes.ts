@@ -4,9 +4,9 @@
 export const zoomed = "data-zoomed";
 
 /**
- * Present while a finger or the mouse drags (swipe, pan or drag to close).
+ * Present while a finger or the mouse swipes, pans or pulls to dismiss.
  */
-export const dragging = "data-dragging";
+export const swiping = "data-swiping";
 
 /**
  * Side of the previous item the item shown came from, on screen: `right`

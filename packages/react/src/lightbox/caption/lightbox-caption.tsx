@@ -11,7 +11,7 @@ import {
 } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import { useLightboxSlideContext } from "../slide/lightbox-slide-context";
-import { type LightboxActivationDirection, LightboxPhase } from "../types";
+import { type LightboxActivationDirection } from "../types";
 import { useLightboxStartingStyle } from "../use-lightbox-starting-style";
 
 export type LightboxCaptionState = {
@@ -52,10 +52,7 @@ export function LightboxCaption(
     return () => setCaptionId(undefined);
   }, [empty, id, setCaptionId]);
 
-  const starting = useLightboxStartingStyle(
-    active,
-    active && phase === LightboxPhase.Open,
-  );
+  const starting = useLightboxStartingStyle(active, active && phase === "open");
 
   const state: LightboxCaptionState = React.useMemo(
     () => ({

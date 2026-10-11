@@ -25,12 +25,19 @@ describe("Lightbox.Trigger", () => {
     const onValueChange = vi.fn();
     render(<TestLightbox onValueChange={onValueChange} />);
     expect(screen.queryByRole("dialog")).toBeNull();
+    const trigger = screen.getByRole("button", { name: "Open image 2 of 3" });
 
     await openLightboxAt("Open image 2 of 3");
 
     expect(loadMedia).toHaveBeenCalledWith(ITEMS[1]);
 
-    expect(onValueChange).toHaveBeenCalledWith("b");
+    expect(onValueChange).toHaveBeenCalledWith(
+      "b",
+      expect.objectContaining({
+        reason: "trigger-press",
+        trigger,
+      }),
+    );
     expect(screen.getByTestId("counter").textContent).toBe("2 / 3");
     expect(screen.getByRole("img", { name: "Second" })).toBeTruthy();
   });

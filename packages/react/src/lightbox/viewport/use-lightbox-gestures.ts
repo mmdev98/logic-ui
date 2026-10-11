@@ -18,14 +18,14 @@ import type {
   LightboxMediaEntry,
   LightboxRootContextValue,
 } from "../root/lightbox-root-context";
-import { LightboxPhase, type LightboxZoom } from "../types";
+import { type LightboxZoom } from "../types";
+import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
   clampLightboxValue,
   clampLightboxZoom,
   LIGHTBOX_IDENTITY_DISMISS,
   getLightboxPanBounds,
   isLightboxZoomed,
-  rubberbandLightboxOverflow,
   rubberbandLightboxValue,
   zoomLightboxAroundPoint,
 } from "../utils/lightbox-geometry";
@@ -40,6 +40,33 @@ const VELOCITY_WINDOW = 100;
 const PAN_GLIDE_TIME = 200;
 /** Share of a pinch past the zoom limits that still follows the fingers. */
 const PINCH_OVERSHOOT = 0.3;
+
+/**
+ * Controls inside a slide (a Close button, a link, a player): a press that
+ * starts on one is theirs, not a gesture. The gestures would capture the
+ * pointer, and the control would never get its click.
+ */
+const INTERACTIVE = [
+  "button",
+  "a[href]",
+  "input",
+  "select",
+  "textarea",
+  "label",
+  '[role="button"]',
+  '[role="link"]',
+  '[contenteditable="true"]',
+  "video[controls]",
+  "audio[controls]",
+].join(",");
+
+function isOnLightboxControl(event: React.PointerEvent<HTMLElement>): boolean {
+  // Not `instanceof Element`: it fails for elements of another window (iframes).
+  const target = event.target as Partial<Element>;
+  if (typeof target.closest !== "function") return false;
+  const control = target.closest(INTERACTIVE);
+  return control !== null && event.currentTarget.contains(control);
+}
 
 type Point = { x: number; y: number };
 type Sample = Point & { time: number };
@@ -82,6 +109,8 @@ export interface UseLightboxGesturesOptions {
   animateOffset: (offset: number) => void;
   /** Sets how fast the track settles after a release, 0.1 to 1 (`--lightbox-swipe-strength`). */
   setStrength: (strength: number) => void;
+  /** Keeps a multi-item swipe on its original track rather than a neighbour's jump slot. */
+  onSwipe: (step: number) => void;
 }
 
 export interface UseLightboxGesturesResult {
@@ -109,9 +138,9 @@ function getVelocity(samples: Sample[]): Point {
 
 /**
  * One gesture engine for the viewer, so swiping, zooming, panning and
- * dragging to close never fight over the same touch:
+ * pulling to dismiss never fight over the same touch:
  *
- * - one finger at rest: swipe between items, or drag down or up to close;
+ * - one finger at rest: swipe between items, or pull down or up to dismiss;
  * - one finger while zoomed: pan, and swipe on once the image's edge is reached;
  * - two fingers: pinch to zoom around them;
  * - tap: show or hide the controls; double tap: zoom in at the point, or out;
@@ -130,6 +159,7 @@ export function useLightboxGestures(
     setOffset,
     animateOffset,
     setStrength,
+    onSwipe,
   } = options;
 
   const tapTimeout = useTimeout();
@@ -159,70 +189,83 @@ export function useLightboxGestures(
   };
 
   /**
-   * Height the close drag is measured against: the slide's, or the viewport's
+   * Height the pull to dismiss is measured against: the slide's, or the viewport's
    * when the slide has no `Lightbox.Media`.
    */
   const getDismissHeight = (entry: LightboxMediaEntry | undefined): number =>
     entry?.layout.slideHeight || getViewport()?.clientHeight || 1;
 
-  /** `data-dragging` on the viewport only, for the cursor. */
-  const setViewportDragging = (dragging: boolean) => {
+  /** `data-swiping` on the viewport only, for the cursor. */
+  const setViewportSwiping = (swiping: boolean) => {
     const viewport = getViewport();
     if (!viewport) return;
-    if (dragging) viewport.setAttribute("data-dragging", "");
-    else viewport.removeAttribute("data-dragging");
+    if (swiping) viewport.setAttribute("data-swiping", "");
+    else viewport.removeAttribute("data-swiping");
   };
 
   /**
-   * `data-dragging` on the viewport, the popup and the backdrop. While it is
+   * `data-swiping` on the viewport, the popup and the backdrop. While it is
    * set, the app turns its transitions off so the page follows the finger.
    */
-  const setDragging = (dragging: boolean) => {
-    setViewportDragging(dragging);
-    root.setDragging(dragging);
+  const setSwiping = (swiping: boolean) => {
+    setViewportSwiping(swiping);
+    root.setSwiping(swiping);
   };
 
-  /** Puts the close drag back at rest; the popup keeps `data-dragging` until it's there. */
+  /** Puts the pulled image back at rest; the popup keeps `data-swiping` until it's there. */
   const settleDismiss = () => {
     root.animateDismiss(LIGHTBOX_IDENTITY_DISMISS, () =>
-      root.setDragging(false),
+      root.setSwiping(false),
     );
   };
 
   /** Track offset with a rubber band past the first and last items. */
   const rubberbandOffset = (offset: number) => {
-    const width = getWidth();
-    if (offset > 0 && !root.hasPrevious)
-      return rubberbandLightboxOverflow(offset, width);
-    if (offset < 0 && !root.hasNext)
-      return rubberbandLightboxOverflow(offset, width);
-    return offset;
+    const stride = getStride();
+    return rubberbandLightboxValue(
+      offset,
+      -(root.items.length - 1 - root.index) * stride,
+      root.index * stride,
+      getWidth(),
+    );
   };
 
   /**
    * Settles the track on an item after a gesture. Every gesture ends here, so
    * a press that caught the track mid-animation never leaves it between items.
    */
-  const releaseTrack = (velocity: number) => {
+  const releaseTrack = (velocity: number, event: Event) => {
     const offset = getOffset();
     if (offset === 0) return;
-    const step = getLightboxSwipeStep({
-      offset,
-      startOffset: stateRef.current.offsetStart,
-      velocity,
-      stride: getStride(),
-      minDistance: LIGHTBOX_SWIPE_DISTANCE,
-      minVelocity: LIGHTBOX_SWIPE_VELOCITY,
-    });
-    const canStep =
-      (step === 1 && root.hasNext) || (step === -1 && root.hasPrevious);
+    const step = clampLightboxValue(
+      getLightboxSwipeStep({
+        offset,
+        startOffset: stateRef.current.offsetStart,
+        velocity,
+        stride: getStride(),
+        minDistance: LIGHTBOX_SWIPE_DISTANCE,
+        minVelocity: LIGHTBOX_SWIPE_VELOCITY,
+      }),
+      -root.index,
+      root.items.length - 1 - root.index,
+    );
+    // The app can cancel the step in `onValueChange`: the track springs back.
+    const stepped =
+      step !== 0 &&
+      root.stepIndex(
+        step,
+        offset,
+        createLightboxChangeEventDetails("swipe", event),
+      );
+    if (stepped) onSwipe(step);
     // A flick settles as fast as it was thrown.
-    const remaining = canStep
-      ? getStride() - Math.abs(offset)
+    const remaining = stepped
+      ? Math.abs(offset + step * getStride())
       : Math.abs(offset);
     setStrength(getLightboxSwipeStrength(remaining, velocity));
-    if (canStep) root.stepIndex(step, offset);
-    else animateOffset(0);
+    // If a controlled value stays unchanged, return to it. An accepted
+    // change replaces this animation with the transition to the new index.
+    animateOffset(0);
   };
 
   const startPinch = (state: GestureState) => {
@@ -235,7 +278,7 @@ export function useLightboxGestures(
     tapTimeout.clear();
     // A swipe in progress goes back while the fingers zoom.
     if (getOffset() !== 0) animateOffset(0);
-    setDragging(true);
+    setSwiping(true);
   };
 
   const handleTap = (point: Point, time: number, pointerType: string) => {
@@ -273,8 +316,9 @@ export function useLightboxGestures(
 
   const onPointerDown = useStableCallback(
     (event: React.PointerEvent<HTMLElement>) => {
-      if (root.phase !== LightboxPhase.Open) return;
+      if (root.phase !== "open") return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
+      if (isOnLightboxControl(event)) return;
       const state = stateRef.current;
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -359,7 +403,7 @@ export function useLightboxGestures(
         } else {
           state.mode = GestureMode.Dismiss;
         }
-        setDragging(true);
+        setSwiping(true);
       }
 
       if (state.mode === GestureMode.Swipe) {
@@ -411,16 +455,16 @@ export function useLightboxGestures(
         }
         state.mode =
           state.pointers.size > 0 ? GestureMode.Settled : GestureMode.Idle;
-        if (state.mode === GestureMode.Idle) setDragging(false);
+        if (state.mode === GestureMode.Idle) setSwiping(false);
         return;
       }
       if (state.pointers.size > 0) return;
 
       const mode = state.mode;
       state.mode = GestureMode.Idle;
-      setViewportDragging(false);
-      // The drag to close keeps `data-dragging` on the popup while it settles.
-      if (mode !== GestureMode.Dismiss) root.setDragging(false);
+      setViewportSwiping(false);
+      // The pull to dismiss keeps `data-swiping` on the popup while it settles.
+      if (mode !== GestureMode.Dismiss) root.setSwiping(false);
       // A pointer that stopped before it was released has no speed left.
       const velocity = getVelocity(
         state.samples.filter(
@@ -433,12 +477,12 @@ export function useLightboxGestures(
         if (!cancelled) {
           handleTap(state.start, event.timeStamp, state.pointerType);
         }
-        releaseTrack(0);
+        releaseTrack(0, event.nativeEvent);
       } else if (mode === GestureMode.Swipe) {
-        releaseTrack(velocity.x * directionSign);
+        releaseTrack(velocity.x * directionSign, event.nativeEvent);
       } else if (mode === GestureMode.Pan) {
         if (getOffset() !== 0) {
-          releaseTrack(velocity.x * directionSign);
+          releaseTrack(velocity.x * directionSign, event.nativeEvent);
           root.animateZoom(root.getZoom(), { clamp: true });
         } else {
           const zoom = root.getZoom();
@@ -459,14 +503,19 @@ export function useLightboxGestures(
         const isFast =
           Math.abs(velocity.y) > LIGHTBOX_DISMISS_VELOCITY &&
           Math.sign(velocity.y) === Math.sign(deltaY);
-        if (!cancelled && (isFar || isFast)) {
-          // Transitions back on, so the backdrop fades out as the viewer closes.
-          root.setDragging(false);
-          root.close();
-        } else {
-          settleDismiss();
-        }
-        releaseTrack(0);
+        const closed =
+          !cancelled &&
+          (isFar || isFast) &&
+          root.close(
+            createLightboxChangeEventDetails("swipe", event.nativeEvent),
+            // The flight back starts at the speed of the finger.
+            velocity,
+          );
+        // Transitions back on, so the backdrop fades out as the viewer
+        // closes; a pull too short, or cancelled by the app, springs back.
+        if (closed) root.setSwiping(false);
+        else settleDismiss();
+        releaseTrack(0, event.nativeEvent);
       }
     },
   );
@@ -478,7 +527,7 @@ export function useLightboxGestures(
     if (!viewport) return undefined;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      if (root.phase !== LightboxPhase.Open) return;
+      if (root.phase !== "open") return;
       const entry = root.getActiveMedia();
       if (!entry?.zoomElement) return;
       const lineHeight = event.deltaMode === 1 ? 16 : 1;
@@ -509,7 +558,7 @@ export function useLightboxGestures(
       const state = stateRef.current;
       state.pointers.clear();
       state.mode = GestureMode.Idle;
-      setViewportDragging(false);
+      setViewportSwiping(false);
       if (getOffset() !== 0) animateOffset(0);
       settleDismiss();
     };

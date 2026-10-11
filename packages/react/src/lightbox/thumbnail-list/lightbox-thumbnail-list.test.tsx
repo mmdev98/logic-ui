@@ -199,14 +199,14 @@ describe("Lightbox.ThumbnailList", () => {
 
     firePointer("pointerDown", third, 300);
     firePointer("pointerMove", third, 260);
-    expect(strip.hasAttribute("data-dragging")).toBe(true);
+    expect(strip.hasAttribute("data-swiping")).toBe(true);
     expect(strip.scrollLeft).toBe(140);
     firePointer("pointerUp", third, 260);
     await act(async () => {
       fireEvent.click(third);
     });
 
-    expect(strip.hasAttribute("data-dragging")).toBe(false);
+    expect(strip.hasAttribute("data-swiping")).toBe(false);
     expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
   });
 
