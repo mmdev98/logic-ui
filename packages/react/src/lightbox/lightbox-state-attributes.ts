@@ -1,4 +1,4 @@
-import type { LightboxActivationDirection } from "./types";
+import type { LightboxRootActivationDirection } from "./root/lightbox-root";
 
 /**
  * Starting point of the animation of new content, as in Base UI's state:
@@ -11,7 +11,7 @@ export type LightboxTransitionStatus = "starting" | undefined;
  * Without it, `useRender` would write `data-activationdirection`.
  */
 export const LIGHTBOX_STATE_ATTRIBUTES = {
-  activationDirection: (value: LightboxActivationDirection) => ({
+  activationDirection: (value: LightboxRootActivationDirection) => ({
     "data-activation-direction": value,
   }),
   transitionStatus: (value: LightboxTransitionStatus) =>
@@ -23,8 +23,8 @@ export const LIGHTBOX_STATE_ATTRIBUTES = {
  * which maps only its own state.
  */
 export function getLightboxStateAttributes(state: {
-  activationDirection: LightboxActivationDirection;
-  transitionStatus?: LightboxTransitionStatus;
+  activationDirection: LightboxRootActivationDirection;
+  transitionStatus?: LightboxTransitionStatus | undefined;
 }): Record<string, string> {
   return {
     ...LIGHTBOX_STATE_ATTRIBUTES.activationDirection(state.activationDirection),

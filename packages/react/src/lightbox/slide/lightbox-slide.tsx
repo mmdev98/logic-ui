@@ -6,10 +6,8 @@ import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import * as React from "react";
 import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import {
-  type LightboxActivationDirection,
-  type LightboxMediaStatus,
-} from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
+import type { LightboxMediaStatus } from "../media/lightbox-media";
 import { getLightboxSlideId } from "../utils/lightbox-items";
 import { TRACK_PROGRESS } from "../viewport/lightbox-viewport-track";
 import { slideProgress } from "./lightbox-slide-css-vars";
@@ -30,7 +28,7 @@ export type LightboxSlideState = {
   /** Whether its `Lightbox.Media` failed to load. */
   error: boolean;
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
 };
 
 export type LightboxSlideProps = useRender.ComponentProps<

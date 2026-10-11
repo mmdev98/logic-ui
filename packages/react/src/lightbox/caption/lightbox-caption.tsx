@@ -11,14 +11,14 @@ import {
 } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import { useLightboxSlideContext } from "../slide/lightbox-slide-context";
-import { type LightboxActivationDirection } from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
 import { useLightboxStartingStyle } from "../use-lightbox-starting-style";
 
 export type LightboxCaptionState = {
   /** Whether its slide is the one shown in the viewer. */
   active: boolean;
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
   /** `starting` for one frame when its slide becomes the one shown. */
   transitionStatus: LightboxTransitionStatus;
 };

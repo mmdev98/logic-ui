@@ -8,7 +8,7 @@ import {
   type LightboxTransitionStatus,
 } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { type LightboxActivationDirection } from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
 import { useLightboxStartingStyle } from "../use-lightbox-starting-style";
 
 export type LightboxCounterState = {
@@ -17,7 +17,7 @@ export type LightboxCounterState = {
   /** Number of items. */
   count: number;
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
   /** `starting` for one frame when the item shown changes. */
   transitionStatus: LightboxTransitionStatus;
 };
@@ -31,7 +31,9 @@ export interface LightboxCounterProps extends Omit<
    * @default `${index + 1} / ${count}`
    */
   children?:
-    React.ReactNode | ((state: LightboxCounterState) => React.ReactNode);
+    | React.ReactNode
+    | ((state: LightboxCounterState) => React.ReactNode)
+    | undefined;
 }
 
 /**

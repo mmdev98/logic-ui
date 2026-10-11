@@ -15,7 +15,8 @@ import {
 } from "../lightbox-dialog-state";
 import { getLightboxStateAttributes } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { type LightboxActivationDirection } from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
+import * as REASONS from "../lightbox-reasons";
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 
 export type LightboxPopupState = DialogPopupState & {
@@ -24,7 +25,7 @@ export type LightboxPopupState = DialogPopupState & {
   /** Whether a tap hid the controls. */
   controlsHidden: boolean;
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
 };
 
 export interface LightboxPopupProps
@@ -133,7 +134,7 @@ export function LightboxPopup(props: LightboxPopupProps): React.ReactElement {
         .direction === "rtl";
     const step = LIGHTBOX_KEYBOARD_PAN_STEP;
     const eventDetails = createLightboxChangeEventDetails(
-      "keyboard",
+      REASONS.keyboard,
       event.nativeEvent,
     );
 

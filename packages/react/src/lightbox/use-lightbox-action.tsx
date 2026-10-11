@@ -21,7 +21,7 @@ export interface UseLightboxActionOptions {
   /** Default `aria-label`; the caller's wins. */
   label: string;
   /** Key announced with `aria-keyshortcuts`. */
-  shortcut?: string;
+  shortcut?: string | undefined;
 }
 
 /**

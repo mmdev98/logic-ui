@@ -1,6 +1,6 @@
 import { AnimationFrame } from "@base-ui/utils/useAnimationFrame";
 import { LIGHTBOX_SWIPE_STRENGTH } from "../constants";
-import { type LightboxActivationDirection } from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
 import { clampLightboxValue } from "./lightbox-geometry";
 
 /**
@@ -105,7 +105,7 @@ export function tweenLightbox(
 export function getLightboxActivationDirection(
   step: number,
   direction: "ltr" | "rtl",
-): LightboxActivationDirection {
+): LightboxRootActivationDirection {
   if (step === 0) return "none";
   const forward = step > 0;
   const towardsRight = direction === "rtl" ? !forward : forward;

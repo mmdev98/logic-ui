@@ -1,4 +1,5 @@
-import { type LightboxMediaSize, type LightboxMediaStatus } from "../types";
+import { type LightboxMediaSize } from "../types";
+import type { LightboxMediaStatus } from "../media/lightbox-media";
 
 /** Tags `Lightbox.Media` fits, measures and listens to. */
 const MEDIA_TAGS = new Set(["IMG", "VIDEO", "IFRAME"]);

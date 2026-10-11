@@ -52,6 +52,7 @@ export {
   LightboxMedia,
   type LightboxMediaProps,
   type LightboxMediaState,
+  type LightboxMediaStatus,
 } from "./media/lightbox-media";
 export {
   LightboxNext,
@@ -73,7 +74,15 @@ export {
   type LightboxPreviousState,
 } from "./previous/lightbox-previous";
 export { createLightboxHandle, LightboxHandle } from "./root/lightbox-handle";
-export { LightboxRoot, type LightboxRootProps } from "./root/lightbox-root";
+export {
+  LightboxRoot,
+  type LightboxRootActivationDirection,
+  type LightboxRootChangeEventDetails,
+  type LightboxRootChangeEventReason,
+  type LightboxRootCloseTarget,
+  type LightboxRootPhase,
+  type LightboxRootProps,
+} from "./root/lightbox-root";
 export {
   useLightboxRootContext,
   useLightboxRootZoomContext,
@@ -101,6 +110,7 @@ export {
 } from "./thumbnail-indicator/lightbox-thumbnail-indicator";
 export {
   LightboxThumbnailList,
+  type LightboxThumbnailListOrientation,
   type LightboxThumbnailListProps,
   type LightboxThumbnailListState,
   type LightboxThumbnailRender,
@@ -141,14 +151,5 @@ export {
   type LightboxZoomValueState,
 } from "./zoom-value/lightbox-zoom-value";
 export type { LightboxTransitionStatus } from "./lightbox-state-attributes";
-export {
-  type LightboxActivationDirection,
-  type LightboxCloseTarget,
-  type LightboxMediaStatus,
-  type LightboxPhase,
-  type LightboxRootChangeEventReason,
-  type LightboxItemValue,
-  type LightboxMediaSize,
-  type LightboxRootChangeEventDetails,
-} from "./types";
+export type { LightboxItemValue, LightboxMediaSize } from "./types";
 export { loadLightboxMedia } from "./utils/lightbox-items";

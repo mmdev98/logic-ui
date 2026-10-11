@@ -15,7 +15,7 @@ import {
 import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { TRACK_PROGRESS } from "./lightbox-viewport-track";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
-import { type LightboxActivationDirection } from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
 import { prefersLightboxReducedMotion } from "../utils/lightbox-flight";
 import { isLightboxItemRendered } from "../utils/lightbox-items";
 import { tweenLightbox } from "../utils/lightbox-motion";
@@ -30,7 +30,7 @@ export type LightboxViewportState = {
   /** Whether the active image is zoomed in. */
   zoomed: boolean;
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
 };
 
 export interface LightboxViewportProps extends Omit<
@@ -52,7 +52,7 @@ export interface LightboxViewportProps extends Omit<
    * of the track are also rendered.
    * @default 1
    */
-  neighbors?: number;
+  neighbors?: number | undefined;
 }
 
 const INITIAL_METRICS: LightboxViewportContextValue = {

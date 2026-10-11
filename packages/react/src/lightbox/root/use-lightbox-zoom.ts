@@ -38,7 +38,10 @@ export interface UseLightboxZoomResult {
   /** Where the running zoom animation ends, or the current zoom. */
   getTargetZoom: () => LightboxZoom;
   setZoom: (zoom: LightboxZoom) => void;
-  animateZoom: (zoom: LightboxZoom, options?: { clamp?: boolean }) => void;
+  animateZoom: (
+    zoom: LightboxZoom,
+    options?: { clamp?: boolean | undefined },
+  ) => void;
   setDismiss: (dismiss: LightboxDismiss, progress: number) => void;
   /** Animates the pull to dismiss to `dismiss`, then calls `onComplete`. */
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
@@ -144,7 +147,7 @@ export function useLightboxZoom(
   });
 
   const animateZoom = useStableCallback(
-    (zoom: LightboxZoom, animateOptions?: { clamp?: boolean }) => {
+    (zoom: LightboxZoom, animateOptions?: { clamp?: boolean | undefined }) => {
       stopZoom();
       const entry = getActiveMedia();
       const target =

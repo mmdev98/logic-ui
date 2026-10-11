@@ -24,6 +24,16 @@ import {
   isLightboxMediaZoomable,
 } from "../utils/lightbox-media";
 
+/**
+ * Loading state of the media in a `Lightbox.Slide`.
+ *
+ * - `"idle"`: No `Lightbox.Media` in the slide.
+ * - `"loading"`: The media is loading; the slide and the media have `data-loading`.
+ * - `"loaded"`: The media has loaded, or has nothing to load.
+ * - `"error"`: The media failed to load; the slide and the media have `data-error`.
+ */
+export type LightboxMediaStatus = "idle" | "loading" | "loaded" | "error";
+
 export type LightboxMediaState = {
   /** Whether its slide is the one shown in the viewer. */
   active: boolean;
@@ -42,9 +52,9 @@ export interface LightboxMediaProps extends useRender.ComponentProps<
    * the media's shape before it has loaded, so the image flies in at the
    * right size.
    */
-  width?: number | string;
+  width?: number | string | undefined;
   /** Natural height of the media, when known. See `width`. */
-  height?: number | string;
+  height?: number | string | undefined;
 }
 
 /** Media events that tell the loading state or the natural size. */

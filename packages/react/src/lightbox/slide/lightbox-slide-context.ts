@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, use } from "react";
-import type { LightboxMediaStatus, LightboxItemValue } from "../types";
+import type { LightboxItemValue } from "../types";
+import type { LightboxMediaStatus } from "../media/lightbox-media";
 
 export interface LightboxSlideContextValue {
   /** The item, as passed to `items`. */

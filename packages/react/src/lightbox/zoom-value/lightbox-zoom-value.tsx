@@ -19,7 +19,9 @@ export interface LightboxZoomValueProps extends Omit<
    * @default `${Math.round(scale * 100)}%`
    */
   children?:
-    React.ReactNode | ((state: LightboxZoomValueState) => React.ReactNode);
+    | React.ReactNode
+    | ((state: LightboxZoomValueState) => React.ReactNode)
+    | undefined;
 }
 
 /**

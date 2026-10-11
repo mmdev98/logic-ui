@@ -18,6 +18,7 @@ import type {
   LightboxMediaEntry,
   LightboxRootContextValue,
 } from "../root/lightbox-root-context";
+import * as REASONS from "../lightbox-reasons";
 import { type LightboxZoom } from "../types";
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
@@ -255,7 +256,7 @@ export function useLightboxGestures(
       root.stepIndex(
         step,
         offset,
-        createLightboxChangeEventDetails("swipe", event),
+        createLightboxChangeEventDetails(REASONS.swipe, event),
       );
     if (stepped) onSwipe(step);
     // A flick settles as fast as it was thrown.
@@ -507,7 +508,7 @@ export function useLightboxGestures(
           !cancelled &&
           (isFar || isFast) &&
           root.close(
-            createLightboxChangeEventDetails("swipe", event.nativeEvent),
+            createLightboxChangeEventDetails(REASONS.swipe, event.nativeEvent),
             // The flight back starts at the speed of the finger.
             velocity,
           );

@@ -6,13 +6,15 @@ export type LightboxStateProps<State> = {
    * CSS class applied to the element, or a function that returns a class
    * based on the component's state.
    */
-  className?: string | ((state: State) => string | undefined);
+  className?: string | ((state: State) => string | undefined) | undefined;
   /**
    * Style applied to the element, or a function that returns a style object
    * based on the component's state.
    */
   style?:
-    React.CSSProperties | ((state: State) => React.CSSProperties | undefined);
+    | React.CSSProperties
+    | ((state: State) => React.CSSProperties | undefined)
+    | undefined;
   /**
    * Replaces the component's HTML element with a different tag, or composes
    * it with another component. Accepts a `ReactElement` or a function that
@@ -21,7 +23,8 @@ export type LightboxStateProps<State> = {
   render?:
     | React.ReactElement
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    | ((props: any, state: State) => React.ReactElement);
+    | ((props: any, state: State) => React.ReactElement)
+    | undefined;
 };
 
 /**

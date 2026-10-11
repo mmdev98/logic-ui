@@ -1,7 +1,7 @@
 import type {
   LightboxRootChangeEventDetails,
   LightboxRootChangeEventReason,
-} from "../types";
+} from "../root/lightbox-root";
 
 /**
  * Details passed to `onValueChange`, built like Base UI's: `cancel()` marks

@@ -2,15 +2,17 @@
 
 import { createContext, use } from "react";
 import {
-  type LightboxActivationDirection,
   type LightboxDismiss,
   type LightboxMediaLayout,
   type LightboxMediaSize,
-  type LightboxPhase,
   type LightboxItemValue,
-  type LightboxRootChangeEventDetails,
   type LightboxZoom,
 } from "../types";
+import type {
+  LightboxRootActivationDirection,
+  LightboxRootPhase,
+  LightboxRootChangeEventDetails,
+} from "./lightbox-root";
 
 /**
  * Slide of the track after the index changed by `step`. `offset` is where a
@@ -49,7 +51,7 @@ export interface LightboxRootContextValue {
   /** Value of the item shown in the viewer, or last shown. */
   activeValue: LightboxItemValue | undefined;
   open: boolean;
-  phase: LightboxPhase;
+  phase: LightboxRootPhase;
   /** Value of the item whose image loads before the viewer opens. */
   pendingValue: LightboxItemValue | null;
   /** The trigger the image flies from or lands on, while it flies. */
@@ -70,7 +72,7 @@ export interface LightboxRootContextValue {
   /** Natural sizes of the media loaded so far, by item value. */
   mediaSizes: ReadonlyMap<LightboxItemValue, LightboxMediaSize>;
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
   /** Prefix of the ids that link the thumbnails to the slides. */
   id: string;
   /** The `Lightbox.ThumbnailList`, when there is one. */
@@ -124,7 +126,10 @@ export interface LightboxRootContextValue {
   /** Applies a zoom now, stopping any zoom animation. */
   setZoom: (zoom: LightboxZoom) => void;
   /** Animates to a zoom; `clamp` first brings it in bounds. */
-  animateZoom: (zoom: LightboxZoom, options?: { clamp?: boolean }) => void;
+  animateZoom: (
+    zoom: LightboxZoom,
+    options?: { clamp?: boolean | undefined },
+  ) => void;
   setDismiss: (dismiss: LightboxDismiss, progress: number) => void;
   /** Animates the pull to dismiss to `dismiss`, then calls `onComplete`. */
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;

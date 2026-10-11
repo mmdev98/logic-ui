@@ -9,6 +9,7 @@ import { useLightboxRootContext } from "../root/lightbox-root-context";
 
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import { getLightboxSlideId } from "../utils/lightbox-items";
+import * as REASONS from "../lightbox-reasons";
 import {
   useLightboxThumbnailListContext,
   useLightboxThumbnailListItemContext,
@@ -82,7 +83,7 @@ export function LightboxThumbnail(
           goTo(
             index,
             createLightboxChangeEventDetails(
-              "thumbnail-press",
+              REASONS.thumbnailPress,
               event.nativeEvent,
               event.currentTarget,
             ),

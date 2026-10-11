@@ -9,7 +9,8 @@ import * as React from "react";
 import { LIGHTBOX_STATE_ATTRIBUTES } from "../lightbox-state-attributes";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 import { useLightboxThumbnailListContext } from "../thumbnail-list/lightbox-thumbnail-list-context";
-import type { LightboxActivationDirection, LightboxRect } from "../types";
+import type { LightboxRect } from "../types";
+import type { LightboxRootActivationDirection } from "../root/lightbox-root";
 import { getLightboxRelativeRect } from "../utils/lightbox-geometry";
 import { formatLightboxSwipeFollow } from "../utils/lightbox-indicator";
 import {
@@ -21,7 +22,7 @@ import {
 
 export type LightboxThumbnailIndicatorState = {
   /** Side of the previous item the item shown came from, on screen. */
-  activationDirection: LightboxActivationDirection;
+  activationDirection: LightboxRootActivationDirection;
 };
 
 export type LightboxThumbnailIndicatorProps = useRender.ComponentProps<

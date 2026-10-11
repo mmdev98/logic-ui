@@ -4,6 +4,7 @@ import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
+import * as REASONS from "../lightbox-reasons";
 import {
   type LightboxActionProps,
   type LightboxActionState,
@@ -26,7 +27,7 @@ export function LightboxNext(props: LightboxNextProps): React.ReactElement {
     onAction: (event) =>
       goToNext(
         createLightboxChangeEventDetails(
-          "next-press",
+          REASONS.nextPress,
           event.nativeEvent,
           event.currentTarget,
         ),

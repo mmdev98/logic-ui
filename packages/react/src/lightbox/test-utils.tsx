@@ -10,7 +10,7 @@ export type TestItem = {
   id: string;
   src: string;
   alt: string;
-  caption?: string;
+  caption?: string | undefined;
 };
 
 export const ITEMS: TestItem[] = [
@@ -26,15 +26,15 @@ export const loadMedia = vi.fn<
 
 export type TestLightboxProps = Partial<LightboxRootProps<TestItem>> & {
   /** Rendered inside each slide's media, after the image. */
-  mediaChildren?: (item: TestItem) => React.ReactNode;
+  mediaChildren?: ((item: TestItem) => React.ReactNode) | undefined;
   /** Rendered inside each slide, after the media. */
-  itemChildren?: (item: TestItem) => React.ReactNode;
+  itemChildren?: ((item: TestItem) => React.ReactNode) | undefined;
   /** Rendered inside the popup, after the controls. */
-  popupChildren?: React.ReactNode;
+  popupChildren?: React.ReactNode | undefined;
   /** Values of the items that get a trigger: every item by default. */
-  triggerValues?: readonly string[];
+  triggerValues?: readonly string[] | undefined;
   /** `crossfade` on every trigger. */
-  crossfade?: boolean;
+  crossfade?: boolean | undefined;
 };
 
 /** A trigger per item and a viewer with every control. */

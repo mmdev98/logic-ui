@@ -4,6 +4,7 @@ import * as React from "react";
 import { useLightboxRootContext } from "../root/lightbox-root-context";
 
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
+import * as REASONS from "../lightbox-reasons";
 import {
   type LightboxActionProps,
   type LightboxActionState,
@@ -28,7 +29,7 @@ export function LightboxPrevious(
     onAction: (event) =>
       goToPrevious(
         createLightboxChangeEventDetails(
-          "previous-press",
+          REASONS.previousPress,
           event.nativeEvent,
           event.currentTarget,
         ),

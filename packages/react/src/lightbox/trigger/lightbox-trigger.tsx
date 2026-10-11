@@ -11,6 +11,7 @@ import {
 } from "../root/lightbox-root-context";
 import { type LightboxItemValue } from "../types";
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
+import * as REASONS from "../lightbox-reasons";
 import { useLightboxElementRef } from "../use-lightbox-element-ref";
 
 export type LightboxTriggerState = {
@@ -42,7 +43,7 @@ export interface LightboxTriggerProps extends useRender.ComponentProps<
    * Links a trigger placed outside `Lightbox.Root` to it, from
    * `Lightbox.createHandle()`.
    */
-  handle?: LightboxHandle;
+  handle?: LightboxHandle | undefined;
   /**
    * Whether it shows something other than the media it opens: an avatar, a
    * cover, an icon. The image then crossfades with a copy of it during the
@@ -50,7 +51,7 @@ export interface LightboxTriggerProps extends useRender.ComponentProps<
    * home. A trigger `closeTarget` picks for another item always crossfades.
    * @default false
    */
-  crossfade?: boolean;
+  crossfade?: boolean | undefined;
 }
 
 function subscribeToNothing(): () => void {
@@ -160,7 +161,7 @@ export function LightboxTrigger(
           void root.openValue(
             value,
             createLightboxChangeEventDetails(
-              "trigger-press",
+              REASONS.triggerPress,
               event.nativeEvent,
               event.currentTarget,
             ),

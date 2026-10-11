@@ -16,15 +16,20 @@ import {
   LightboxThumbnailListItemContext,
 } from "./lightbox-thumbnail-list-context";
 import { useLightboxThumbnailListScroll } from "./use-lightbox-thumbnail-list-scroll";
+import * as REASONS from "../lightbox-reasons";
+
+/**
+ * Which way the thumbnails run, and which arrow keys move between them. Set
+ * as `data-orientation`.
+ *
+ * - `"horizontal"`: Left to right (right to left in a right-to-left layout); ← → move, and the wheel scrolls the strip sideways.
+ * - `"vertical"`: Top to bottom; ↑ ↓ move.
+ */
+export type LightboxThumbnailListOrientation = "horizontal" | "vertical";
 
 export type LightboxThumbnailListState = {
-  /**
-   * Which way the thumbnails run.
-   *
-   * - `"horizontal"`: Left to right, or right to left in a right-to-left layout.
-   * - `"vertical"`: Top to bottom.
-   */
-  orientation: "horizontal" | "vertical";
+  /** Which way the thumbnails run. */
+  orientation: LightboxThumbnailListOrientation;
   /** Whether thumbnails are scrolled out of view before the start. */
   overflowStart: boolean;
   /** Whether thumbnails are scrolled out of view past the end. */
@@ -57,18 +62,15 @@ export interface LightboxThumbnailListProps extends Omit<
   /**
    * Which arrow keys move between thumbnails, and which way the strip
    * scrolls. Set as `data-orientation`.
-   *
-   * - `"horizontal"`: ← → move, and the wheel scrolls the strip sideways.
-   * - `"vertical"`: ↑ ↓ move, for a column of thumbnails.
    * @default "horizontal"
    */
-  orientation?: "horizontal" | "vertical";
+  orientation?: LightboxThumbnailListOrientation | undefined;
   /**
    * Whether the arrow keys also show the item of the thumbnail they move to.
    * When `false`, they only move focus, and Enter shows the item.
    * @default true
    */
-  activateOnFocus?: boolean;
+  activateOnFocus?: boolean | undefined;
 }
 
 /**
@@ -185,7 +187,7 @@ export function LightboxThumbnailList(
         goTo(
           target,
           createLightboxChangeEventDetails(
-            "list-navigation",
+            REASONS.listNavigation,
             event.nativeEvent,
             element,
           ),

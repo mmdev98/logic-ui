@@ -10,7 +10,9 @@ import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import { useId } from "@base-ui/utils/useId";
 import { useTimeout } from "@base-ui/utils/useTimeout";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
+import type { BaseUIChangeEventDetails } from "@base-ui/react/types";
 import * as React from "react";
+import * as REASONS from "../lightbox-reasons";
 import {
   LIGHTBOX_CROSSFADE_WINDOW,
   LIGHTBOX_FLIGHT_DURATION,
@@ -18,14 +20,9 @@ import {
   LIGHTBOX_ZOOM_SCALE,
 } from "../constants";
 import {
-  type LightboxActivationDirection,
-  type LightboxCloseTarget,
   type LightboxMediaSize,
-  type LightboxPhase,
   type LightboxRect,
   type LightboxItemValue,
-  type LightboxRootChangeEventDetails,
-  type LightboxRootChangeEventReason,
 } from "../types";
 import { createLightboxChangeEventDetails } from "../utils/lightbox-event-details";
 import {
@@ -115,6 +112,79 @@ type LightboxFlight = {
   animations: Animation[];
 };
 
+/**
+ * Where the image flies back to when the viewer closes, and where focus returns.
+ *
+ * - `"active"`: The trigger of the item shown. Without one on the page, the image fades out. For a grid with a trigger per item.
+ * - `"opener"`: The trigger that opened the viewer, whichever item is shown. For one cover that opens a whole album.
+ * - `"nearest"`: The trigger of the item shown, or else the trigger of the nearest item that has one. For a grid that shows a few items and a "+5" tile.
+ */
+export type LightboxRootCloseTarget = "active" | "opener" | "nearest";
+
+/**
+ * Where the viewer is in its open and close animation.
+ *
+ * - `"closed"`: The viewer is not shown.
+ * - `"opening"`: The image flies from its trigger, or fades in.
+ * - `"open"`: The image has landed in the viewer.
+ * - `"closing"`: The image flies back to its trigger, or fades out.
+ */
+export type LightboxRootPhase = "closed" | "opening" | "open" | "closing";
+
+/**
+ * Side of the previous item the item shown came from, on screen. Set as
+ * `data-activation-direction`, like Base UI's tabs.
+ *
+ * - `"left"`: It came from the left: after Previous in a left-to-right layout, Next in a right-to-left one.
+ * - `"right"`: It came from the right: after Next in a left-to-right layout, Previous in a right-to-left one.
+ * - `"none"`: The viewer just opened, or the item shown didn't move.
+ */
+export type LightboxRootActivationDirection = "left" | "right" | "none";
+
+/**
+ * Why the item open in the viewer changed, in `onValueChange`. The values
+ * are Base UI's where it has one (`escape-key`, `close-press`), so a
+ * reason compares with the same string as in a Base UI dialog.
+ *
+ * - `"trigger-press"`: A `Lightbox.Trigger` was pressed.
+ * - `"swipe"`: A swipe to the next or previous item, or a pull to dismiss.
+ * - `"keyboard"`: A viewer shortcut: ← → Home End.
+ * - `"list-navigation"`: The arrow keys in a `Lightbox.ThumbnailList` with `activateOnFocus`.
+ * - `"thumbnail-press"`: A `Lightbox.Thumbnail` was pressed.
+ * - `"previous-press"`: `Lightbox.Previous` was pressed.
+ * - `"next-press"`: `Lightbox.Next` was pressed.
+ * - `"close-press"`: `Lightbox.Close` was pressed.
+ * - `"escape-key"`: Escape was pressed.
+ * - `"outside-press"`: A press outside the popup.
+ * - `"focus-out"`: Focus left the popup.
+ * - `"imperative-action"`: A call on the `handle`: `open()` or `close()`.
+ * - `"missing"`: The open item was removed from `items`: the viewer shows its neighbour, or closes.
+ * - `"none"`: Another cause, such as a Base UI dialog change without a reason.
+ */
+export type LightboxRootChangeEventReason =
+  | typeof REASONS.triggerPress
+  | typeof REASONS.swipe
+  | typeof REASONS.keyboard
+  | typeof REASONS.listNavigation
+  | typeof REASONS.thumbnailPress
+  | typeof REASONS.previousPress
+  | typeof REASONS.nextPress
+  | typeof REASONS.closePress
+  | typeof REASONS.escapeKey
+  | typeof REASONS.outsidePress
+  | typeof REASONS.focusOut
+  | typeof REASONS.imperativeAction
+  | typeof REASONS.missing
+  | typeof REASONS.none;
+
+/**
+ * Details of a change of the open item: its `reason`, the native `event`,
+ * and the element it came from (`trigger`). Call `cancel()` to keep the
+ * current item; a cancelled swipe or pull to dismiss springs back.
+ */
+export type LightboxRootChangeEventDetails =
+  BaseUIChangeEventDetails<LightboxRootChangeEventReason>;
+
 export interface LightboxRootProps<Item = unknown> {
   /** The items, in order. They can have any shape. */
   items: readonly Item[];
@@ -123,48 +193,50 @@ export interface LightboxRootProps<Item = unknown> {
    * items are added, removed or reordered.
    * @default (item) => item.id
    */
-  itemToValue?: (item: Item) => LightboxItemValue;
-  children?: React.ReactNode;
+  itemToValue?: ((item: Item) => LightboxItemValue) | undefined;
+  children?: React.ReactNode | undefined;
   /** Value of the item open in the viewer, or `null` while it is closed. */
-  value?: LightboxItemValue | null;
+  value?: LightboxItemValue | null | undefined;
   /**
    * Value of the item open at first, when `value` is not controlled.
    * @default null
    */
-  defaultValue?: LightboxItemValue | null;
+  defaultValue?: LightboxItemValue | null | undefined;
   /**
    * Called when the viewer opens, closes or shows another item, with why
    * (`eventDetails.reason`). Call `eventDetails.cancel()` to keep the
    * current item: a cancelled swipe or pull to dismiss springs back.
    */
-  onValueChange?: (
-    value: LightboxItemValue | null,
-    eventDetails: LightboxRootChangeEventDetails,
-  ) => void;
+  onValueChange?:
+    | ((
+        value: LightboxItemValue | null,
+        eventDetails: LightboxRootChangeEventDetails,
+      ) => void)
+    | undefined;
   /**
    * Called when the viewer has finished opening or closing: the image has
    * landed in the viewer, or back on the page.
    */
-  onOpenChangeComplete?: (open: boolean) => void;
+  onOpenChangeComplete?: ((open: boolean) => void) | undefined;
   /**
    * Where the image flies back to when the viewer closes, and where focus
    * returns. When that trigger shows another image, the image turns into it
    * on the way, and the trigger stays empty while the viewer is open.
    * @default "active"
    */
-  closeTarget?: LightboxCloseTarget;
+  closeTarget?: LightboxRootCloseTarget | undefined;
   /**
    * Scrolls the page, hidden behind the viewer, to keep the trigger the image
    * flies back to in view as the items change. Without it, closing on an
    * item whose trigger is off screen fades the image out instead.
    * @default true
    */
-  scrollToTrigger?: boolean;
+  scrollToTrigger?: boolean | undefined;
   /**
    * Links `Lightbox.Trigger`s placed outside the root, from
    * `Lightbox.createHandle()`.
    */
-  handle?: LightboxHandle;
+  handle?: LightboxHandle | undefined;
   /**
    * Loads an item's media before the viewer opens, so it shows at once and
    * flies from its trigger at the right size. Resolves with its natural
@@ -173,12 +245,12 @@ export interface LightboxRootProps<Item = unknown> {
    * resized image, or a video.
    * @default loadLightboxMedia
    */
-  loadMedia?: (item: Item) => Promise<LightboxMediaSize | null>;
+  loadMedia?: ((item: Item) => Promise<LightboxMediaSize | null>) | undefined;
   /**
    * Largest zoom scale.
    * @default 4
    */
-  maxScale?: number;
+  maxScale?: number | undefined;
 }
 
 /**
@@ -219,7 +291,7 @@ export function LightboxRoot<Item = unknown>(
   if (value !== null && value !== lastValue) setLastValue(value);
   const shownValue = value ?? lastValue;
 
-  const [phase, setPhase] = React.useState<LightboxPhase>("closed");
+  const [phase, setPhase] = React.useState<LightboxRootPhase>("closed");
   const [pendingValue, setPendingValue] =
     React.useState<LightboxItemValue | null>(null);
   // The trigger the image flies back to, kept empty while the viewer is open.
@@ -292,7 +364,7 @@ export function LightboxRoot<Item = unknown>(
   // opening on an item doesn't count as a move.
   const [directionIndex, setDirectionIndex] = React.useState(index);
   const [activationDirection, setActivationDirection] =
-    React.useState<LightboxActivationDirection>("none");
+    React.useState<LightboxRootActivationDirection>("none");
   if (index !== directionIndex) {
     setDirectionIndex(index);
     setActivationDirection(
@@ -784,7 +856,7 @@ export function LightboxRoot<Item = unknown>(
   // The open item was removed: show its neighbour, or close when none is left.
   React.useEffect(() => {
     if (!open || foundIndex !== -1) return;
-    const eventDetails = createLightboxChangeEventDetails("missing");
+    const eventDetails = createLightboxChangeEventDetails(REASONS.missing);
     if (activeValue === undefined) close(eventDetails);
     else setValue(activeValue, eventDetails);
   }, [open, foundIndex, activeValue, close, setValue]);
@@ -1047,7 +1119,7 @@ export function LightboxRoot<Item = unknown>(
             // Escape, an outside press or `Lightbox.Close`, with Base UI's reason.
             const closed = close(
               createLightboxChangeEventDetails(
-                eventDetails.reason as LightboxRootChangeEventReason,
+                eventDetails.reason,
                 eventDetails.event,
                 eventDetails.trigger,
               ),
