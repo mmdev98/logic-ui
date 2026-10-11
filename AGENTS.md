@@ -144,7 +144,9 @@ src/lightbox/
 - `index.ts` exports the namespace first (`export * as Clipboard from "./index.parts"`), then the full
   names, context hooks, value types, props types, state types, union types and constants, and the data
   attribute and CSS variable docs as namespaces
-  (`export * as LightboxPopupDataAttributes from "./popup/lightbox-popup-data-attributes"`). Hooks and
+  (`export * as LightboxPopupDataAttributes from "./popup/lightbox-popup-data-attributes"`,
+  `export * as LightboxPopupCssVariables from "./popup/lightbox-popup-css-vars"`, like Base UI's
+  `DialogPopupCssVariables`). Hooks and
   types are never namespace members: `useClipboardRootContext`, not `Clipboard.useRootContext`.
 - Add the folder to `src/index.ts` (`export * from "./clipboard"`), then run `pnpm generate:exports`.
 - Put `"use client"` at the top of every part, context and hook file, not in `index.ts` or
