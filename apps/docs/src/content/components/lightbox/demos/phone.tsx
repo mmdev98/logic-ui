@@ -7,7 +7,7 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Roll: "w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-black",
+  Roll: "w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-black select-none",
   RollHeader: "flex items-baseline justify-between px-4 pt-4 pb-3",
   RollTitle: "m-0 text-lg font-bold",
   RollCount: "text-xs text-neutral-500",
@@ -16,7 +16,7 @@ const local = {
   Tile: "aspect-square",
   // The image fills the screen width, behind the bars.
   Viewport:
-    "absolute inset-0 cursor-zoom-in gap-x-2 in-data-zoomed:cursor-grab data-dragging:cursor-grabbing",
+    "absolute inset-0 cursor-default gap-x-2 select-none in-data-zoomed:cursor-grab in-data-zoomed:data-swiping:cursor-grabbing",
   Slide: "p-0",
   TopBar:
     "absolute inset-x-0 top-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 bg-black/50 px-2 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 backdrop-blur-xl",

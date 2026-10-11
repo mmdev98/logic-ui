@@ -2,8 +2,8 @@
 
 ## Usage guidelines
 
-- **The images fly:** the image grows out of its trigger when the viewer opens and flies back when it closes. Hide the trigger while it has `data-popup-open`.
-- **One gesture engine:** swipe, pinch, double tap, pan and drag to close are handled together, so they never fight over a touch. The viewer needs no carousel or zoom library.
+- **The images fly:** the image grows out of its trigger when the viewer opens and flies back when it closes, to its own trigger or to the one `closeTarget` picks, such as a "+5" tile. Hide the trigger while it has `data-popup-open`.
+- **One gesture engine:** swipe, pinch, double tap, pan and pull to dismiss are handled together, so they never fight over a touch. A long drag can cross multiple slides and settles at the position reached, rather than advancing only one. The viewer needs no carousel or zoom library.
 - **Your layout, your items:** the lightbox renders no thumbnails of its own. Lay out your page however you like and place a `Lightbox.Trigger` per item. Items can have any shape; the lightbox only needs a stable value for each.
 - **No dependencies:** the lightbox needs no carousel, zoom, animation or image library, and no framework. `Lightbox.Media` wraps your own `<img>`, `<video>` or `<iframe>`; give it any `src` or `srcSet`.
 
@@ -51,7 +51,7 @@ Import the component and assemble its parts:
 
 ### Getting started
 
-The smallest viewer: triggers, the images and a close button. Swipe, pinch, double tap, drag to close and the keyboard all work.
+The smallest viewer: triggers, the images and a close button. Swipe, pinch, double tap, pull to dismiss and the keyboard all work.
 
 <Demo src="./demos/minimal.tsx" />
 
@@ -100,15 +100,113 @@ One trigger opens one image, here a profile photo with the zoom only. The image 
 
 ### Chat attachments
 
-One lightbox per message, so each viewer only shows the images of its message; the last tile counts the images it hides, which the viewer still shows. Dots pick the image, with a bright dot gliding over the active one.
+One lightbox for the whole conversation: swipe from one message's images to the next. The last tile of a message counts the images it hides, which the viewer still shows; Dots pick the image, with a bright dot gliding over the active one.
 
-`Lightbox.createHandle()` links a lightbox to code and to triggers outside `Lightbox.Root`, like Base UI's [detached triggers](/docs/components/dialog): pass the same handle to the root, and to each `Lightbox.Trigger` placed elsewhere. Here "Shared media" opens every image of the channel with `sharedMedia.open(value)`; without a trigger to fly from, the image fades in.
+The messages scroll. As you move through the images, the list scrolls behind the viewer to the message of the image shown (`scrollToTrigger`, on by default), so closing always flies back to a tile you can see. With `closeTarget="nearest"`, an image hidden behind "+1" flies back to the "+1" tile, which stays empty while such an image is shown, and turns into it on the way.
+
+`Lightbox.createHandle()` links a lightbox to code and to triggers outside `Lightbox.Root`, like Base UI's [detached triggers](/docs/components/dialog): pass the same handle to the root, and to each `Lightbox.Trigger` placed elsewhere. Here "Shared media" opens the first image with `sharedMedia.open(value)`. Its tile is scrolled out of view, so the image fades in rather than flying from a place you can't see.
 
 <Demo src="./demos/chat.tsx" />
 
+### Where the image lands
+
+When the viewer closes, the image flies back to a trigger on the page, and focus returns to it. `closeTarget` on `Lightbox.Root` picks which:
+
+- `"active"` (the default): the trigger of the item shown. Without one on the page, the image fades out where it is.
+- `"opener"`: the trigger that opened the viewer, whichever item is shown. For a cover that opens a whole album, like the ones below.
+- `"nearest"`: the trigger of the item shown, or else the trigger of the nearest item that has one. For a grid that shows a few items and a "+5" tile, like the gallery at the top of the page.
+
+A trigger that shows something other than its media takes `crossfade`: an avatar for a story, or a tile with a "+5" count or a play badge, which then fade out as the image leaves and back in as it lands. With it, the image grows out of its look as the viewer opens, and turns back into it on the way home, like the stories below.
+
+The trigger the image will fly back to has `data-popup-open` the whole time the viewer is open, following the item shown: hide it (`data-popup-open:invisible`) and its slot waits empty, for the drop after a drag too. When that trigger shows another image (the cover, the "+5" tile), a copy of it flies along with the image and fades in over it, so the image turns into the trigger on the way, and lands looking exactly like it. A trigger that can't be seen, scrolled out of the window or out of a list that clips it, gets the image faded out instead; `scrollToTrigger` scrolls the page to it beforehand, as in the chat above.
+
+<Demo src="./demos/album.tsx" />
+
+```tsx title="An album cover"
+<Lightbox.Root items={album.photos} closeTarget="opener">
+  <Lightbox.Trigger value={album.photos[0].id}>
+    <img src={album.cover} alt="" />
+  </Lightbox.Trigger>
+  …
+</Lightbox.Root>
+```
+
+### Instagram-style stories
+
+The people stay in one horizontally scrollable row on every screen size. Their rings change color and opacity on hover without lifting the avatars. The demo uses `select-none` to avoid accidental selection, except for the reply field, which keeps `select-text`.
+
+Each ring is a person, and the items of the lightbox are the people: swipe, or drag past the edge of the card, to go from one person to the next. A person's own stories play inside their slide, like Instagram:
+
+- **They play by themselves.** One bar per story fills for five seconds, or for the length of a video, then the next story shows, then the next person. After the last one, the viewer closes, and the ring turns grey.
+- **Tap** the left third of the card to go back, anywhere else to go on; ← → do the same. **Hold** to pause; the controls fade while you hold. The pause button and typing a reply pause too, as WCAG asks of content that moves on by itself.
+- **Controlled.** The stories move on to the next person by changing `value`, and the viewer slides there as it does for Next. `onOpenChangeComplete` starts the bars once the card has landed, and `loadMedia` loads the story the person is on before the card flies out of their ring.
+- **Keys of your own.** The popup's `onKeyDown` runs before its shortcuts: it takes ← → for the stories and prevents the default, so the library doesn't also change the person.
+
+The rings take `crossfade`, since they show a face rather than the story: the card grows out of the face as it opens, and turns back into it as it flies home.
+
+Every control sits on the story card, inside `Lightbox.Media`: the bars, the author, pause, `Lightbox.Close`, the story's text in a `Lightbox.Caption`, and the reply field. So they slide with the person during a swipe, follow the pull to dismiss, and fly back into the ring with the card. Controls inside a slide get their clicks: a press that starts on a button, a link or a field isn't a gesture. `maxScale={1}` keeps the stories at their resting scale.
+
+The stories turn like the faces of a cube, in CSS only. Each `Lightbox.Slide` has `--lightbox-slide-progress`, its distance from the centre in slides (`0` shown, `-1` one to the left, `1` one to the right), on every frame of a swipe, its settle and Next. The library places slides with `translate`, so their `transform` is free: here each person turns by the progress times 90° around the edge they share with the next one, with a `perspective` on `Lightbox.Viewport`. The same variable makes a fade (`opacity`), a stack, or a coverflow.
+
+```tsx title="Cube transition"
+<Lightbox.Viewport className="[perspective:1400px] gap-x-0">
+  {(story) => (
+    <Lightbox.Slide className="[transform-origin:clamp(0%,calc(50%_-_var(--lightbox-slide-progress)*10000%),100%)_50%] [transform:rotateY(calc(var(--lightbox-slide-progress)*90deg))] [backface-visibility:hidden]">
+      …
+    </Lightbox.Slide>
+  )}
+</Lightbox.Viewport>
+```
+
+<Demo src="./demos/stories.tsx" />
+
+### 3D coverflow
+
+The same variable makes a coverflow. `neighbors={3}` on `Lightbox.Viewport` renders three covers on each side, instead of one.
+
+The structure separates four jobs:
+
+- `Lightbox.Slide` places the cover in the fan and sorts it by depth. Placement stays outside perspective, so depth does not stretch the spacing.
+- An inner pose turns the cover in its own `perspective()`, flattened into the slide. A smoothstep curve eases the turn into each wing. The slides stay parallel, so covers overlap without cutting through each other, including halfway through a swipe.
+- A surface inside the pose handles entrance and exit. On `data-ending-style`, neighboring covers fold inward and fade with `--lightbox-flight-duration` and `--lightbox-flight-easing`, while the active `Lightbox.Media` flies back to its trigger. The ambient background, captions and controls leave on the same timing. Do not transform or fade the active surface or the whole popup: that would move or fade its return flight too.
+- A decorative, masked image below the media supplies the reflection without a browser-specific property. It fades on close and zoom. It is outside `Lightbox.Media`, so it never becomes part of the flying image.
+
+The cover size, perspective and depth scale together on smaller screens. The viewport fills the viewer; slide padding sizes and positions the resting covers. This keeps zoom and pan constrained by the viewer edges rather than the small cover box, avoiding empty strips when the enlarged image can fill that axis. While zoomed, neighboring covers and reflections fade away; keep the media's overflow visible so the enlarged image is not clipped. Put the ring and shadow on the image, not `Lightbox.Media`: zoom and pan transform only the image, so a frame on the media box would stay behind. The image inherits the media's rounded corners, including during zoom and the opening and closing flights. Reduced motion uses a flat carousel without reflections or entrance/exit movement.
+
+<Demo src="./demos/coverflow.tsx" />
+
+```tsx title="Coverflow"
+// The classes and the progress curve are in the demo's source.
+<Lightbox.Viewport neighbors={3}>
+  {(album) => (
+    <Lightbox.Slide className={local.Slide}>
+      <div className={local.Turn}>
+        <div className={local.Surface}>
+          <Lightbox.Media width={1000} height={1000} className={local.Media}>
+            <img
+              src={album.src}
+              alt={`${album.title} cover`}
+              className={local.Image}
+            />
+          </Lightbox.Media>
+          <div aria-hidden="true" className={local.Reflection}>
+            <img
+              src={album.src}
+              alt=""
+              draggable={false}
+              className={local.ReflectionImage}
+            />
+          </div>
+        </div>
+      </div>
+    </Lightbox.Slide>
+  )}
+</Lightbox.Viewport>
+```
+
 ### Controlled and changing items
 
-The viewer's state is one value: the open item's, or `null` while it is closed. Control it with `value` and `onValueChange`, here shown in an address bar as an app would put it in the URL.
+The viewer's state is one value: the open item's, or `null` while it is closed. Control it with `value` and `onValueChange`, here shown in an address bar as an app would put it in the URL. Changing `value` while the viewer is open slides to the new item, as Next does.
 
 `items` can change at any time, even while the viewer is open: it stays on the same item. Delete the open photo from the viewer and it moves to the neighbour; delete the last one and it closes. Add photos and the counter follows.
 
@@ -122,11 +220,32 @@ const [value, setValue] = React.useState<LightboxItemValue | null>(null);
 </Lightbox.Root>;
 ```
 
+`onValueChange` also receives `eventDetails`, built like Base UI's: `reason` tells what changed the item (`"swipe"`, `"trigger-press"`, `"thumbnail-press"`, `"escape-key"`, `"close-press"` …), `event` is the native event and `trigger` the element it came from. Call `eventDetails.cancel()` to keep the current item: a cancelled swipe springs back, and a cancelled pull to dismiss puts the image back. `onOpenChangeComplete` is called once the image has landed, in the viewer (`true`) or back on the page (`false`).
+
+```tsx title="Change reasons"
+<Lightbox.Root
+  items={photos}
+  onValueChange={(value, eventDetails) => {
+    // Opening pushes a history entry; moving between photos replaces it.
+    if (eventDetails.reason === "trigger-press") {
+      history.pushState(null, "", `?photo=${value}`);
+    } else if (value !== null) {
+      history.replaceState(null, "", `?photo=${value}`);
+    }
+  }}
+  onOpenChangeComplete={(open) => {
+    if (!open) history.replaceState(null, "", location.pathname);
+  }}
+>
+  …
+</Lightbox.Root>
+```
+
 ### Loading and errors
 
 The trigger loads the image before the viewer opens, so it shows at once and flies at the right size; the trigger has `data-pending` meanwhile. By default the item's `src` is loaded; pass `loadMedia` to choose how, as here where the slow photo waits 1.5 seconds.
 
-Inside the viewer, `Lightbox.Media` and its `Lightbox.Slide` have `data-loading` while the media loads and `data-error` if it fails, from the media's own events. Put a spinner or a message next to the media, inside `Lightbox.Media`: everything in it flies and follows the drag to close. When the image fails, hide it (`group-data-error:invisible`): the box keeps its shape and the message takes its place. Give the `<img>` a new `src` to load it again. A failed image doesn't zoom, and the viewer keeps working.
+Inside the viewer, `Lightbox.Media` and its `Lightbox.Slide` have `data-loading` while the media loads and `data-error` if it fails, from the media's own events. Put a spinner or a message next to the media, inside `Lightbox.Media`: everything in it flies and follows the pull to dismiss. When the image fails, hide it (`group-data-error:invisible`): the box keeps its shape and the message takes its place. Give the `<img>` a new `src` to load it again. A failed image doesn't zoom, and the viewer keeps working.
 
 - **Unknown size.** Without `width` and `height`, the shape is only known once the image loads: fade it in with `group-data-loading:opacity-0`.
 - **Retry.** The fourth photo fails once and loads on retry. The message has `role="alert"`, so screen readers announce it.
@@ -150,7 +269,7 @@ To show smaller images as thumbnails and larger ones in the viewer, give the `<i
 
 ### Video and other media
 
-`Lightbox.Media` takes any media as its direct child: an `<img>`, a `<video>`, an `<iframe>`. It fits the media's shape inside the slide, flies it from the trigger and back, and follows the drag to close. Only images zoom: on other media the zoom gestures do nothing and `Lightbox.ZoomIn` is disabled. A video pauses when its slide is no longer shown and when the viewer closes, and while a player with `controls` has focus, the arrow keys stay its own. Pass your own `loadMedia` so a video doesn't preload as an image: here it reads the video's size from its metadata.
+`Lightbox.Media` takes any media as its direct child: an `<img>`, a `<video>`, an `<iframe>`. It fits the media's shape inside the slide, flies it from the trigger and back, and follows the pull to dismiss. Only images zoom: on other media the zoom gestures do nothing and `Lightbox.ZoomIn` is disabled. A video pauses when its slide is no longer shown and when the viewer closes, and while a player with `controls` has focus, the arrow keys stay its own. Pass your own `loadMedia` so a video doesn't preload as an image: here it reads the video's size from its metadata.
 
 <Demo src="./demos/video.tsx" />
 
@@ -193,9 +312,9 @@ import { Toolbar } from "@logic-ui/react/toolbar";
 
 - **Keyboard.** The list is a single tab stop. The arrow keys move between thumbnails and show their item, and Home and End go to the first and last. With `activateOnFocus={false}`, the arrows only move focus and Enter shows the item.
 - **Orientation.** `orientation` sets which arrow keys move and which way the list scrolls: ← → for `"horizontal"` (the default), ↑ ↓ for `"vertical"`. The list has `data-orientation`, so one class list can style both.
-- **Scrolling.** Give the list `overflow: auto`. The active thumbnail glides to its centre, and is centred again when a CSS transition changes its size. The mouse can drag the list (`data-dragging` meanwhile), and the wheel scrolls a horizontal list. Touch scrolls natively.
+- **Scrolling.** Give the list `overflow: auto`. The active thumbnail glides to its centre, and is centred again when a CSS transition changes its size. The mouse can drag the list (`data-swiping` meanwhile), and the wheel scrolls a horizontal list. Touch scrolls natively.
 - **Edges.** The list has `data-overflow-start` and `data-overflow-end` while thumbnails are hidden past an edge: fade that edge with a mask, `data-overflow-end:mask-r-from-85%`. Hide the browser's scrollbar with `[scrollbar-width:none] [&::-webkit-scrollbar]:hidden`.
-- **Sliding indicator.** `Lightbox.ThumbnailIndicator`, placed in the list after the function child, is one element that glides to the active thumbnail, like Base UI's `Tabs.Indicator`. Make the list `relative`: the indicator gets the active thumbnail's box in it as `--active-thumbnail-left`, `--active-thumbnail-top`, `--active-thumbnail-width` and `--active-thumbnail-height`, scrolls with the list, and follows thumbnails that change size. While a swipe drags the slides, the variables move towards the next or previous thumbnail with them, so the indicator follows the finger: turn its transition off during the drag (`in-data-dragging:transition-none`).
+- **Sliding indicator.** `Lightbox.ThumbnailIndicator`, placed in the list after the function child, is one element that glides to the active thumbnail, like Base UI's `Tabs.Indicator`. Make the list `relative`: the indicator gets the active thumbnail's box in it as `--active-thumbnail-left`, `--active-thumbnail-top`, `--active-thumbnail-width` and `--active-thumbnail-height`, scrolls with the list, and follows thumbnails that change size. The variables move with the slides on every frame: towards the next or previous thumbnail while a swipe drags them, then along with them as they settle, at the speed of the flick, and the same for Previous, Next and the keys. So the indicator needs no transition: without one, it lands exactly when the slides do. A jump of several items (Home, End, a far thumbnail) starts the glide from the thumbnail next to the target.
 
 ```tsx title="Thumbnails"
 <Lightbox.ThumbnailList className="relative flex gap-2 overflow-x-auto">
@@ -204,7 +323,7 @@ import { Toolbar } from "@logic-ui/react/toolbar";
       <img src={photo.thumb} alt="" />
     </Lightbox.Thumbnail>
   )}
-  <Lightbox.ThumbnailIndicator className="absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width) transition-[left]" />
+  <Lightbox.ThumbnailIndicator className="absolute top-(--active-thumbnail-top) left-(--active-thumbnail-left) h-(--active-thumbnail-height) w-(--active-thumbnail-width)" />
 </Lightbox.ThumbnailList>
 ```
 
@@ -223,18 +342,18 @@ The viewer works like the photo app of a phone:
 - **Swipe** between images; the image follows the finger, carries on with the flick, and rubber-bands at the first and last image.
 - **Pinch** to zoom around the fingers, and **double tap** to zoom in at the tapped point or back out.
 - **Pan** a zoomed image; past its edge, the drag carries on to the next image.
-- **Drag down** (or up) to close: the image follows the finger and flies back to its thumbnail on release.
+- **Pull down** (or up) to dismiss: the image follows the finger and flies back to its thumbnail on release.
 - **Tap** to hide or show the controls.
 
 With a mouse or trackpad, drag swipes, double click zooms, and the wheel or a trackpad pinch zooms around the cursor.
 
-Here the image fills the screen width under translucent bars. While the image is dragged to close, `--lightbox-dismiss-progress` goes from 0 to 1 on the popup and the backdrop: the page fades in and un-blurs behind it, and the bars slide off the top and bottom of the screen. Try it on a phone, or with the browser's device toolbar.
+Here the image fills the screen width under translucent bars. While the image is pulled to dismiss, `--lightbox-dismiss-progress` goes from 0 to 1 on the popup and the backdrop: the page fades in and un-blurs behind it, and the bars slide off the top and bottom of the screen. Try it on a phone, or with the browser's device toolbar.
 
 <Demo src="./demos/phone.tsx" />
 
 ```tsx title="Controls that slide away"
-// The top bar slides up and out, faster than the drag goes on; no transition while dragging.
-<header className="-translate-y-[calc((100%+1rem)*1.5*var(--lightbox-dismiss-progress,0))] transition-[translate] in-data-dragging:transition-none">
+// The top bar slides up and out, faster than the drag goes on; no transition while swiping.
+<header className="-translate-y-[calc((100%+1rem)*1.5*var(--lightbox-dismiss-progress,0))] transition-[translate] in-data-swiping:transition-none">
   …
 </header>
 ```
@@ -248,11 +367,13 @@ Every part is unstyled. Style the viewer with Tailwind (or any CSS), using the p
 - `Lightbox.Popup` gets `--lightbox-swipe-movement-x` (px on screen, negative to the left) and `--lightbox-swipe-progress` (the same as a share of a slide, `-1` to `1`) while a swipe drags the slides and while they settle, like Base UI's drawer swipe variables. They are `0` at rest. Move anything with the swipe: `translate-x-[calc(var(--lightbox-swipe-progress,0)*2rem)]`. They are relative to the item shown, so they jump when it changes at the end of a swipe.
 - `Lightbox.Popup` gets `--lightbox-swipe-strength` when a swipe is released: `0.1` for a hard flick to `1` for a slow release, like Base UI's drawer. The slides settle in 300 ms times it, and go back to `1` once settled: scale a transition that follows them, `duration-[calc(300ms*var(--lightbox-swipe-strength,1))]`.
 - `Lightbox.Popup` gets `--lightbox-zoom-scale` (`1` at rest) and `--lightbox-zoom-progress` (`0` at rest, `1` at the largest scale), to fade or move things as the image zooms.
-- `Lightbox.Popup` and `Lightbox.Backdrop` get `--lightbox-dismiss-movement-x` and `--lightbox-dismiss-movement-y` (px) with `--lightbox-dismiss-progress` (0 to 1) while the image is dragged to close, and have `data-dragging` during a drag and until the image settles back. Turn transitions off then (`data-dragging:transition-none`, or `in-data-dragging:transition-none` on a control), or whatever follows the progress lags behind the finger.
-- `Lightbox.Viewport` has `data-dragging` during a gesture. Give it a size (`absolute inset-0`) and set the space between images with `gap-x-4`.
+- `Lightbox.Popup` and `Lightbox.Backdrop` get `--lightbox-flight-duration` and `--lightbox-flight-easing`: the length and curve of the flight the image is on. After a pull to dismiss, the curve is a spring (a CSS `linear()`) that starts at the speed of the finger. Time the backdrop and the controls with them, `duration-(--lightbox-flight-duration) ease-(--lightbox-flight-easing)`, and they arrive with the image.
+- `Lightbox.Popup` and `Lightbox.Backdrop` get `--lightbox-dismiss-movement-x` and `--lightbox-dismiss-movement-y` (px) with `--lightbox-dismiss-progress` (0 to 1) while the image is pulled to dismiss, and have `data-swiping` during a drag and until the image settles back. Turn transitions off then (`data-swiping:transition-none`, or `in-data-swiping:transition-none` on a control), or whatever follows the progress lags behind the finger.
+- `Lightbox.Viewport` has `data-swiping` during a gesture. Give it a size (`absolute inset-0`) and set the space between images with `gap-x-4`. Nothing clips: the next images, the zoomed image and the image pulled to dismiss are drawn past its edges, off screen in a full-screen viewer. In a smaller one, add `overflow-hidden`; leave it off for the media to leave the viewport, like the stories.
+- `Lightbox.Slide` has `--lightbox-slide-progress`: its distance from the centre in slides, on every frame the slides move. It is placed with `translate`, leaving `transform` free for a custom transition (a cube, a fade, a stack); put a `perspective` on `Lightbox.Viewport` for 3D.
 - `Lightbox.Slide`'s padding is the space around the media: `p-0` for edge to edge on phones, `md:px-24` on larger screens. Add `pt-[env(safe-area-inset-top)]` and the like for notches (with `viewport-fit=cover` on the page). It has `data-active`, and `data-loading` and `data-error` for its media.
 - `Lightbox.Media` sets its own position and size, and the size of the media in it: style what's around the media, not its box.
-- `Lightbox.Trigger` has `data-popup-open` while the viewer shows its item, from the opening flight to the end of the closing one. Hide it with `data-popup-open:invisible`: the thumbnail disappears from the page but keeps its place, and comes back when the image flies home. It also has `data-pending` while its image loads and `data-flying` while it flies.
+- `Lightbox.Trigger` has `data-popup-open` while the image will fly back to it, from the opening flight to the end of the closing one: the trigger of the item shown, or the one `closeTarget` picks. Hide it with `data-popup-open:invisible`: the thumbnail disappears from the page but keeps its place, and comes back when the image lands. It also has `data-pending` while its image loads, and `data-flying` while the image flies from it or to it.
 
 ### Keyboard
 

@@ -23,8 +23,10 @@ const local = {
   // One large tile and four small ones. The outer corners are on the tiles,
   // not clipped by the grid: the image flies out of each tile with its corners.
   Layout:
-    "grid w-full max-w-xl grid-cols-[2fr_1fr_1fr] grid-rows-[repeat(2,8rem)] gap-1.5",
+    "grid w-full max-w-xl grid-cols-[2fr_1fr_1fr] grid-rows-[repeat(2,8rem)] gap-1.5 select-none",
   Tile: "first:row-span-2 first:rounded-l-2xl nth-3:rounded-tr-2xl last:rounded-br-2xl",
+  // Over the last tile: how many items the grid doesn't show.
+  More: "absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-semibold text-white tabular-nums backdrop-blur-[2px] transition-colors duration-300 group-hover:bg-black/45",
   // Marks a video tile.
   Badge:
     "absolute bottom-2 left-2 flex size-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md",
@@ -48,6 +50,7 @@ const local = {
   ThumbnailBadge:
     "absolute inset-0 m-auto size-3.5 text-white drop-shadow-[0_1px_2px_rgb(0_0_0/0.6)]",
   Ring: `${classes.indicator} rounded-lg`,
+  ZoomReset: `${classes.toolbarValue} h-9 cursor-pointer rounded-full border-none bg-transparent px-2 transition-colors hover:not-data-disabled:bg-white/12 hover:not-data-disabled:text-white data-disabled:cursor-default focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white`,
   // The shortcuts, on large screens with a mouse, set in from the corner,
   // with even padding.
   Legend:
@@ -64,7 +67,16 @@ const items: MediaItem[] = [
   { ...photos[2], type: "image" },
   videos[1],
   { ...photos[5], type: "image" },
+  { ...photos[7], type: "image" },
+  { ...photos[1], type: "image" },
+  { ...photos[3], type: "image" },
+  { ...photos[4], type: "image" },
+  { ...photos[6], type: "image" },
 ];
+
+/** The grid shows the first five; the last tile counts the rest. */
+const TILES = 5;
+const hiddenCount = items.length - TILES;
 
 /** Preloads an image, or reads a video's size, before the viewer opens. */
 function loadMedia(item: MediaItem) {
@@ -78,6 +90,7 @@ const shortcuts = [
   ["+ −", "Zoom"],
   ["0", "Reset zoom"],
   ["Esc", "Close"],
+  ["Drag", "Swipe, or close"],
 ];
 
 /** A still of an item: the image's thumbnail, or a frame of the video. */
@@ -109,27 +122,45 @@ function Preview(props: {
 
 export default function ExampleLightbox() {
   return (
-    <Lightbox.Root items={items} loadMedia={loadMedia}>
+    // The items without a tile fly back into the "+5" tile, the nearest
+    // one, and dissolve into it.
+    <Lightbox.Root items={items} loadMedia={loadMedia} closeTarget="nearest">
       <div className={local.Layout}>
-        {items.map((item, index) => (
-          <Lightbox.Trigger
-            key={item.id}
-            value={item.id}
-            aria-label={`Open ${item.alt}`}
-            className={`${classes.trigger} ${local.Tile}`}
-          >
-            <Preview
-              item={item}
-              large={index === 0}
-              className={classes.triggerImage}
-            />
-            {item.type === "video" && (
-              <span className={local.Badge}>
-                <PlayIcon className="size-3" />
-              </span>
-            )}
-          </Lightbox.Trigger>
-        ))}
+        {items.slice(0, TILES).map((item, index) => {
+          const isLast = index === TILES - 1;
+          return (
+            <Lightbox.Trigger
+              key={item.id}
+              value={item.id}
+              // The "+5" and the play badge aren't in the viewer: they fade
+              // out as the image leaves the tile, and back in as it lands.
+              crossfade={isLast || item.type === "video"}
+              aria-label={
+                isLast
+                  ? `Open ${item.alt}, and ${hiddenCount} more`
+                  : `Open ${item.alt}`
+              }
+              className={`${classes.trigger} ${local.Tile}`}
+            >
+              <Preview
+                item={item}
+                large={index === 0}
+                className={classes.triggerImage}
+              />
+              {isLast ? (
+                <span className={local.More} aria-hidden>
+                  +{hiddenCount}
+                </span>
+              ) : (
+                item.type === "video" && (
+                  <span className={local.Badge}>
+                    <PlayIcon className="size-3" />
+                  </span>
+                )
+              )}
+            </Lightbox.Trigger>
+          );
+        })}
       </div>
 
       <Lightbox.Portal>
@@ -179,7 +210,13 @@ export default function ExampleLightbox() {
                 >
                   <ZoomOutIcon />
                 </Lightbox.ZoomOut>
-                <Lightbox.ZoomValue className={classes.toolbarValue} />
+                {/* The scale, which resets the zoom when pressed. */}
+                <Lightbox.ZoomReset
+                  render={<Toolbar.Button />}
+                  className={local.ZoomReset}
+                >
+                  <Lightbox.ZoomValue />
+                </Lightbox.ZoomReset>
                 <Lightbox.ZoomIn
                   render={<Toolbar.Button />}
                   className={classes.toolbarButton}

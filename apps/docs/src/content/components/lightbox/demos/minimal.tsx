@@ -7,7 +7,7 @@ import { classes } from "./_classes";
 
 const items = photos.slice(0, 4);
 
-/** Only the parts a viewer needs: swipe, zoom, drag to close and Esc still work. */
+/** Only the parts a viewer needs: swipe, zoom, pull to dismiss and Esc still work. */
 export default function ExampleLightboxMinimal() {
   return (
     <Lightbox.Root items={items}>

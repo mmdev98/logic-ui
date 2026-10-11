@@ -117,7 +117,6 @@ export default function ExampleLightboxCoverflow(): React.ReactElement {
           <Lightbox.Viewport
             aria-label="Albums"
             neighbors={3}
-            swipeRubberband={0.1}
             className={local.Viewport}
           >
             {(album: Album) => (

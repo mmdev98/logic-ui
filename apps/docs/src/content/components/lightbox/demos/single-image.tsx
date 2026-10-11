@@ -8,7 +8,7 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Profile: "flex items-center gap-3",
+  Profile: "flex items-center gap-3 select-none",
   // The image grows out of the circle: the flight takes the trigger's radius.
   Avatar: "size-14 rounded-full",
   Name: "m-0 text-sm font-semibold text-white",

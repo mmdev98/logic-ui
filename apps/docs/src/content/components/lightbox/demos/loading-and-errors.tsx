@@ -9,7 +9,7 @@ import { classes } from "./_classes";
 /** Tailwind classes of this demo. */
 const local = {
   Gallery:
-    "grid w-full max-w-xl grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3",
+    "grid w-full max-w-xl grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3 select-none",
   Item: "flex flex-col gap-1.5",
   Tile: "aspect-square rounded-xl",
   Label: "m-0 text-center text-xs text-neutral-500",
@@ -114,7 +114,7 @@ export default function ExampleLightboxLoadingAndErrors() {
           <Lightbox.Viewport className={classes.viewport}>
             {(photo: DemoPhoto) => (
               <Lightbox.Slide className={classes.slide}>
-                {/* Everything inside flies and follows the drag to close. */}
+                {/* Everything inside flies and follows the pull to dismiss. */}
                 <Lightbox.Media
                   width={photo.width}
                   height={photo.height}

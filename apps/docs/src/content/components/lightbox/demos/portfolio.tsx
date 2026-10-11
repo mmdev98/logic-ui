@@ -10,7 +10,7 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Page: "flex w-full max-w-xl flex-col gap-4",
+  Page: "flex w-full max-w-xl flex-col gap-4 select-none",
   PageHeader: "flex items-center justify-between gap-3",
   PageTitle: "m-0 text-base font-semibold",
   Switch:
@@ -21,9 +21,10 @@ const local = {
   CardTitle: "m-0 text-sm font-medium",
   CardText: "m-0 truncate text-xs text-neutral-500",
   // The image leaves room for the list: beside it on wide screens (at the
-  // end, so on the left in right-to-left), below it on phones.
+  // end, so on the left in right-to-left), below it on phones. It clips the
+  // next image and the zoomed one, which would show through the list.
   Viewport:
-    "absolute inset-x-0 top-0 bottom-24 cursor-zoom-in gap-x-4 in-data-zoomed:cursor-grab data-dragging:cursor-grabbing md:end-72 md:bottom-0",
+    "absolute inset-x-0 top-0 bottom-24 cursor-default gap-x-4 overflow-hidden select-none in-data-zoomed:cursor-grab in-data-zoomed:data-swiping:cursor-grabbing md:end-72 md:bottom-0",
   Slide: "px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-4 md:px-20 md:py-16",
   Close: "absolute top-[calc(0.75rem+env(safe-area-inset-top))] start-3",
   // On wide screens, a list with titles; on phones, a strip of squares.

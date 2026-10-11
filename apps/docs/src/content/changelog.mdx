@@ -20,7 +20,7 @@ breaking change is listed under its release.
 - **`Image` is replaced by `Media`**, which wraps your own `<img>`, `<video>` or `<iframe>`:
   `<Lightbox.Media width={photo.width} height={photo.height}><img src={photo.src} alt={photo.alt} /></Lightbox.Media>`.
   It takes the natural `width` and `height`; the `src` and `alt` go on your element. The
-  whole box flies and follows the drag to close, and only an `<img>` zooms. `loadImage` is
+  whole box flies and follows the pull to dismiss, and only an `<img>` zooms. `loadImage` is
   now `loadMedia` (and `loadLightboxImage` is `loadLightboxMedia`), and `LightboxImageStatus`
   is `LightboxMediaStatus`.
 - **Items can have any shape.** `GalleryItemData` is removed. The parts take what they need
@@ -35,6 +35,16 @@ breaking change is listed under its release.
 - **Removed `Delete` and `Download`.** Build them as buttons in the popup.
 - **`Image`'s `data-loaded` is replaced** by `data-loading` and `data-error`, on `Media` and
   its `Slide`.
+- **`data-dragging` is now `data-swiping`**, on `Popup`, `Backdrop`, `Viewport` and
+  `ThumbnailList`, like Base UI's drawer. `ThumbnailList`'s state field is `swiping`.
+- **`data-popup-open` marks the trigger the image will fly back to**: the one of the item shown,
+  or the one `closeTarget` picks. Before, it marked every trigger of the item shown.
+- **`onValueChange` receives `eventDetails`** as its second argument, like Base UI's callbacks.
+- **`Viewport` and `Slide` no longer clip.** Add `overflow-hidden` to the viewport in a viewer
+  smaller than the screen.
+- **Closed sets are string unions, not enums.** `LightboxMediaStatus`, `LightboxPhase` and
+  `LightboxActivationDirection` are types now; write the strings (`"loading"`, `"open"`,
+  `"left"`) instead of `LightboxMediaStatus.Loading` and the like.
 
 ### New features
 
@@ -55,6 +65,32 @@ breaking change is listed under its release.
   `activationDirection`. `Viewport` is a labelled carousel region.
 - The arrow keys stay with a widget inside the popup that uses them itself, such as a Base UI
   toolbar, a text field or a video player, instead of also changing the image.
+- **Where the image lands.** `closeTarget` on `Root` picks the trigger the image flies back to
+  and focus returns to: `"active"` (the item shown, the default), `"opener"` (the trigger that
+  opened the viewer) or `"nearest"` (the nearest item with a trigger, for a "+5" tile).
+  `scrollToTrigger` (on by default) scrolls the page behind the viewer to keep that trigger in
+  view.
+- **Crossfade.** When the image flies to or from a trigger that shows something else (another
+  item, or a trigger with the new `crossfade` prop, such as an avatar or a tile with a count), a
+  copy of the trigger flies along and fades, so the image grows out of its look and turns back
+  into it on the way home. `Trigger` has `data-crossfade`.
+- **Change reasons.** `eventDetails.reason` tells what changed the item
+  (`"swipe"`, `"trigger-press"`, `"escape-key"` …), and `eventDetails.cancel()` keeps the
+  current item: a cancelled swipe or pull to dismiss springs back. `onOpenChangeComplete` is
+  called once the image has landed.
+- **A smoother flight.** It is computed on screen, so the shape and corners change evenly;
+  a flight cut short starts the next from where the image is; after a pull to dismiss, the
+  flight back starts at the speed of the finger. `--lightbox-flight-duration` and
+  `--lightbox-flight-easing` on `Popup` and `Backdrop` let transitions go with it.
+- **Gesture variables.** `Popup` gets `--lightbox-swipe-movement-x`, `--lightbox-swipe-progress`
+  and `--lightbox-swipe-strength` during a swipe, `--lightbox-zoom-scale` and
+  `--lightbox-zoom-progress`, and, with `Backdrop`, `--lightbox-dismiss-movement-x` and `-y`.
+- **Custom transitions.** Each `Slide` has `--lightbox-slide-progress`, its distance from the
+  centre in slides, and is placed with `translate`, leaving `transform` free for a cube, a fade
+  or a coverflow. `Viewport`'s `neighbors` renders more items on each side (1 by default).
+- Changing `value` while the viewer is open slides to the new item, as Next does.
+- `Popup` takes focus when it opens, so its keys work at once; pass `initialFocus` to focus
+  another element.
 
 ## v0.1.0
 
@@ -64,7 +100,7 @@ October 8, 2026. The first release.
 
 - **[Gallery](/docs/components/lightbox)** (now Lightbox): thumbnails that open a full-screen image viewer.
   The image flies out of its thumbnail and back, and the viewer handles swipe, pinch to zoom,
-  double tap, pan, drag to close and the keyboard. Comes with toolbar parts for navigation,
+  double tap, pan, pull to dismiss and the keyboard. Comes with toolbar parts for navigation,
   zoom, download and delete.
 - **[Clipboard](/docs/components/clipboard)**: a button that copies a value and shows that it
   was copied. `Root`, `Trigger` and `Indicator` expose `data-copied`.

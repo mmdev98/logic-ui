@@ -96,6 +96,39 @@ export function PlayIcon(props: IconProps) {
   );
 }
 
+export function PauseIcon(props: IconProps) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden
+      {...props}
+    >
+      <rect x="4" y="3" width="2.75" height="10" rx="0.75" />
+      <rect x="9.25" y="3" width="2.75" height="10" rx="0.75" />
+    </svg>
+  );
+}
+
+/** Outlined; filled with `fill="currentColor"` once liked. */
+export function HeartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 13.5S2 10 2 6a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 4-6 7.5-6 7.5Z" />
+    </Icon>
+  );
+}
+
+export function SendIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14 2 7 9M14 2l-4.5 12L7 9 2 6.5 14 2Z" />
+    </Icon>
+  );
+}
+
 /** A picture with a crack, for images that failed to load. */
 export function BrokenImageIcon(props: IconProps) {
   return (

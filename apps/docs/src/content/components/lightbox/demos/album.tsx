@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Lightbox, LightboxCloseTarget } from "@logic-ui/react/lightbox";
+import { Lightbox } from "@logic-ui/react/lightbox";
 import { getThumbnailSrc, photos, type Photo } from "./_photos";
 import { ChevronIcon, CloseIcon } from "./_icons";
 import { classes } from "./_classes";
@@ -47,10 +47,7 @@ function AlbumCover(props: { album: Album }) {
   const [cover, second, third] = album.photos;
   return (
     // Whichever photo is shown, it flies back into the cover.
-    <Lightbox.Root
-      items={album.photos}
-      closeTarget={LightboxCloseTarget.Opener}
-    >
+    <Lightbox.Root items={album.photos} closeTarget="opener">
       <div className={local.Album}>
         <div className={local.Stack}>
           <img

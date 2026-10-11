@@ -8,7 +8,7 @@ import { classes } from "./_classes";
 /** Tailwind classes of this demo. */
 const local = {
   Window:
-    "flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950",
+    "flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 select-none",
   // The address bar shows the controlled value, as an app would put it in the URL.
   AddressBar:
     "flex items-center gap-2 border-b border-white/10 bg-neutral-900/60 px-3 py-2",

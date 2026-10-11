@@ -14,7 +14,7 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  Row: "grid w-full max-w-md grid-cols-3 gap-2",
+  Row: "grid w-full max-w-md grid-cols-3 gap-2 select-none",
   Tile: "aspect-[3/4] rounded-xl",
   Badge:
     "absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[0.6875rem] font-medium text-white backdrop-blur-md",
