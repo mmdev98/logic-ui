@@ -83,7 +83,9 @@ breaking change is listed under its release.
 - **A smoother flight.** It is computed on screen, so the shape and corners change evenly;
   a flight cut short starts the next from where the image is; after a pull to dismiss, the
   flight back starts at the speed of the finger. `--lightbox-flight-duration` and
-  `--lightbox-flight-easing` on `Popup` and `Backdrop` let transitions go with it.
+  `--lightbox-flight-easing` on `Popup` and `Backdrop` let transitions go with it, and
+  `--lightbox-flight-movement-x`, `-y` and `--lightbox-flight-scale` on `Popup` tell where the
+  image flies, so other content can go there too.
 - **Gesture variables.** `Popup` gets `--lightbox-swipe-movement-x`, `--lightbox-swipe-progress`
   and `--lightbox-swipe-strength` during a swipe, `--lightbox-zoom-scale` and
   `--lightbox-zoom-progress`, and, with `Backdrop`, `--lightbox-dismiss-movement-x` and `-y`.
