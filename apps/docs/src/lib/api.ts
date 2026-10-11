@@ -7,7 +7,7 @@ import { LIBRARY_SRC } from "./library";
 /**
  * API reference extracted from the library's TypeScript source: parts and their
  * props, the `data-*` attributes and CSS variables each part documents in its
- * folder, and the value types and enums exported from the component's `index.ts`.
+ * folder, and the value types (objects and string unions) exported from the component's `index.ts`.
  */
 
 export interface ApiProp {
@@ -16,6 +16,14 @@ export interface ApiProp {
   default?: string;
   description: string;
   required: boolean;
+  /** Each value it accepts, when its type is a union of strings. */
+  values?: ApiValue[];
+}
+
+/** One value of a union of strings, with the note its JSDoc gives it. */
+export interface ApiValue {
+  value: string;
+  description: string;
 }
 
 export interface ApiAttribute {
@@ -37,7 +45,7 @@ export interface ApiPart {
 
 export interface ApiType {
   name: string;
-  kind: "object" | "enum";
+  kind: "object" | "union";
   description: string;
   members: ApiProp[];
 }
@@ -208,6 +216,84 @@ function getTypeText(
   return checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation);
 }
 
+/** A JSDoc list item that documents one value of a union: `` - `"opener"`: … ``. */
+const UNION_VALUE_NOTE = /^- `"([^"]+)"`:\s*(.*)$/;
+
+/**
+ * Splits a JSDoc text into its notes on union values (the list items above)
+ * and the rest.
+ */
+function splitUnionNotes(text: string): {
+  description: string;
+  notes: Map<string, string>;
+} {
+  const notes = new Map<string, string>();
+  const description = text
+    .split("\n")
+    .filter((line) => {
+      const note = UNION_VALUE_NOTE.exec(line.trim());
+      if (note) notes.set(note[1] ?? "", note[2] ?? "");
+      return !note;
+    })
+    .join("\n")
+    .trim();
+  return { description, notes };
+}
+
+/**
+ * The values of a union of string literals, with their notes from the JSDoc
+ * of the union's type alias, then of the prop itself; `null` for any other type.
+ */
+function getUnionValues(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  ownNotes: Map<string, string> = new Map(),
+): ApiValue[] | null {
+  const union = checker.getNonNullableType(type);
+  if (
+    !union.isUnion() ||
+    !union.types.every((part) => part.isStringLiteral())
+  ) {
+    return null;
+  }
+  const aliasNotes = union.aliasSymbol
+    ? splitUnionNotes(getDescription(checker, union.aliasSymbol)).notes
+    : new Map<string, string>();
+  return union.types.map((part) => {
+    const { value } = part as ts.StringLiteralType;
+    return {
+      value,
+      description: ownNotes.get(value) ?? aliasNotes.get(value) ?? "",
+    };
+  });
+}
+
+/**
+ * A union of string literals (`"active" | "opener"`), as a type of the
+ * component: its values with their notes, and the rest of its JSDoc.
+ */
+function extractStringUnion(
+  checker: ts.TypeChecker,
+  symbol: ts.Symbol,
+  type: ts.Type,
+): ApiType | null {
+  const values = getUnionValues(checker, type);
+  if (!values) {
+    return null;
+  }
+  return {
+    name: symbol.name,
+    kind: "union",
+    description: splitUnionNotes(getDescription(checker, symbol)).description,
+    members: values.map(({ value, description }) => ({
+      name: `"${value}"`,
+      type: "",
+      description,
+      required: true,
+    })),
+  };
+}
+
 function extractProps(checker: ts.TypeChecker, type: ts.Type): ApiProp[] {
   const own: ApiProp[] = [];
   const common: ApiProp[] = [];
@@ -220,12 +306,24 @@ function extractProps(checker: ts.TypeChecker, type: ts.Type): ApiProp[] {
     const required = !(symbol.flags & ts.SymbolFlags.Optional);
 
     if (isDocumentedProp(declaration, symbol.name)) {
+      const { description, notes } = splitUnionNotes(
+        getDescription(checker, symbol),
+      );
+      // A union of strings shows its values, not the name of its type.
+      const values = getUnionValues(
+        checker,
+        checker.getTypeOfSymbolAtLocation(symbol, declaration),
+        notes,
+      );
       own.push({
         name: symbol.name,
-        type: getTypeText(checker, symbol, declaration),
+        type: values
+          ? values.map(({ value }) => `"${value}"`).join(" | ")
+          : getTypeText(checker, symbol, declaration),
         default: getDefault(checker, symbol),
-        description: getDescription(checker, symbol),
+        description,
         required,
+        ...(values ? { values } : {}),
       });
     } else if (symbol.name in COMMON_PROPS) {
       common.push({
@@ -330,27 +428,10 @@ function extractType(
     return null;
   }
 
-  if (symbol.flags & ts.SymbolFlags.Enum && ts.isEnumDeclaration(declaration)) {
-    return {
-      name: symbol.name,
-      kind: "enum",
-      description: getDescription(checker, symbol),
-      members: declaration.members.map((member) => {
-        const memberSymbol = checker.getSymbolAtLocation(member.name);
-        return {
-          name: member.name.getText(),
-          type: member.initializer?.getText() ?? "",
-          description: memberSymbol
-            ? getDescription(checker, memberSymbol)
-            : "",
-          required: true,
-        };
-      }),
-    };
-  }
-
   if (symbol.flags & (ts.SymbolFlags.TypeAlias | ts.SymbolFlags.Interface)) {
     const type = checker.getDeclaredTypeOfSymbol(symbol);
+    const union = extractStringUnion(checker, symbol, type);
+    if (union) return union;
     const properties = checker.getPropertiesOfType(type);
     if (properties.length === 0 || type.getCallSignatures().length > 0) {
       return null;

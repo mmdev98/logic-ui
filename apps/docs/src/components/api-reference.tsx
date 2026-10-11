@@ -50,7 +50,7 @@ export function ApiReference(props: {
           <HeadingAnchor level={3} id={getTypeAnchor(type.name)}>
             <span className="font-mono">{type.name}</span>
             <span className="ml-2 border border-line px-1.5 py-0.5 align-middle font-mono text-[10px] font-normal tracking-wider text-faint uppercase">
-              {type.kind === "enum" ? "enum" : "type"}
+              {type.kind === "union" ? "union" : "type"}
             </span>
           </HeadingAnchor>
           {type.description ? (
@@ -59,9 +59,9 @@ export function ApiReference(props: {
             </p>
           ) : null}
           <PropList
-            title={type.kind === "enum" ? "Members" : "Properties"}
+            title={type.kind === "union" ? "Values" : "Properties"}
             props={type.members}
-            enumMembers={type.kind === "enum"}
+            enumMembers={type.kind === "union"}
           />
         </section>
       ))}
@@ -90,13 +90,15 @@ function PropList(props: {
   return (
     <div>
       <ListTitle>{title}</ListTitle>
-      <dl className="border border-line">
+      {/* One grid for the list: the names column is as wide as the longest
+          name, so names never wrap, and every row lines up with it. */}
+      <dl className="border border-line md:grid md:grid-cols-[max-content_minmax(0,1fr)]">
         {entries.map((prop) => (
           <div
             key={prop.name}
-            className="grid gap-x-6 gap-y-1.5 border-t border-line px-4 py-3 first:border-t-0 md:grid-cols-[11rem_1fr]"
+            className="grid gap-x-6 gap-y-1.5 border-t border-line px-4 py-3 first:border-t-0 md:col-span-2 md:grid-cols-subgrid"
           >
-            <dt className="font-mono text-[13px] break-all text-fg">
+            <dt className="font-mono text-[13px] break-all text-fg md:break-normal md:whitespace-nowrap">
               {prop.name}
               {prop.required && !enumMembers ? (
                 <span className="text-accent" title="Required">
@@ -118,6 +120,28 @@ function PropList(props: {
                   <InlineMarkdown>{prop.description}</InlineMarkdown>
                 </p>
               ) : null}
+              {prop.values?.some((value) => value.description) ? (
+                <ul className="mt-2 flex flex-col gap-1.5 border-l border-line pl-3 text-sm leading-6 text-muted">
+                  {prop.values.map((value) => (
+                    <li key={value.value}>
+                      <code className="font-mono text-[12.5px] text-fg">
+                        &quot;{value.value}&quot;
+                      </code>
+                      {value.value === prop.default?.replace(/"/g, "") ? (
+                        <span className="ml-2 font-mono text-[11px] text-faint">
+                          default
+                        </span>
+                      ) : null}
+                      {value.description ? (
+                        <>
+                          {" "}
+                          <InlineMarkdown>{value.description}</InlineMarkdown>
+                        </>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </dd>
           </div>
         ))}
@@ -138,13 +162,15 @@ function AttributeList(props: {
   return (
     <div>
       <ListTitle>{title}</ListTitle>
-      <dl className="border border-line">
+      {/* One grid for the list: the names column is as wide as the longest
+          name, so names never wrap, and every row lines up with it. */}
+      <dl className="border border-line md:grid md:grid-cols-[max-content_minmax(0,1fr)]">
         {attributes.map((attribute) => (
           <div
             key={attribute.name}
-            className="grid gap-x-6 gap-y-1.5 border-t border-line px-4 py-3 first:border-t-0 md:grid-cols-[11rem_1fr]"
+            className="grid gap-x-6 gap-y-1.5 border-t border-line px-4 py-3 first:border-t-0 md:col-span-2 md:grid-cols-subgrid"
           >
-            <dt className="font-mono text-[13px] break-all text-fg">
+            <dt className="font-mono text-[13px] break-all text-fg md:break-normal md:whitespace-nowrap">
               {attribute.name}
             </dt>
             <dd className="text-sm leading-6 text-muted">

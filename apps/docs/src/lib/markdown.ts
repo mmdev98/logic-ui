@@ -51,9 +51,17 @@ function propsTable(props: ApiProp[]): string {
       prop.required ? `${prop.name} (required)` : prop.name,
       `\`${prop.type}\``,
       prop.default ? `\`${prop.default}\`` : "-",
-      prop.description || "-",
+      describeProp(prop),
     ]),
   );
+}
+
+/** A prop's description, then each value of a union with its note. */
+function describeProp(prop: ApiProp): string {
+  const values = (prop.values ?? [])
+    .filter((value) => value.description)
+    .map((value) => `\`"${value.value}"\`: ${value.description}`);
+  return [prop.description, ...values].filter(Boolean).join(" ") || "-";
 }
 
 function attributesTable(header: string, attributes: ApiAttribute[]): string {
@@ -83,12 +91,11 @@ export function apiToMarkdown(api: ComponentApi, order?: string[]): string {
     [
       `### ${type.name}`,
       type.description,
-      type.kind === "enum"
+      type.kind === "union"
         ? table(
-            ["Member", "Value", "Description"],
+            ["Value", "Description"],
             type.members.map((member) => [
-              member.name,
-              `\`${member.type}\``,
+              `\`${member.name}\``,
               member.description,
             ]),
           )
