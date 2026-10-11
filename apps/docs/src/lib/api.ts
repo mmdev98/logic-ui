@@ -208,7 +208,23 @@ function getTypeText(
       ts.isPropertyDeclaration(declaration)) &&
     declaration.type
   ) {
-    return declaration.type.getText().replace(/\s+/g, " ");
+    const type = declaration.type;
+    // An optional prop is written `X | undefined`, like Base UI's; the table
+    // already marks what's optional, so it shows `X`.
+    const parts =
+      declaration.questionToken && ts.isUnionTypeNode(type)
+        ? type.types.filter(
+            (part) => part.kind !== ts.SyntaxKind.UndefinedKeyword,
+          )
+        : [type];
+    return parts
+      .map((part) =>
+        parts.length === 1 && ts.isParenthesizedTypeNode(part)
+          ? part.type.getText()
+          : part.getText(),
+      )
+      .join(" | ")
+      .replace(/\s+/g, " ");
   }
   const type = checker.getNonNullableType(
     checker.getTypeOfSymbolAtLocation(symbol, declaration),

@@ -42,9 +42,11 @@ breaking change is listed under its release.
 - **`onValueChange` receives `eventDetails`** as its second argument, like Base UI's callbacks.
 - **`Viewport` and `Slide` no longer clip.** Add `overflow-hidden` to the viewport in a viewer
   smaller than the screen.
-- **Closed sets are string unions, not enums.** `LightboxMediaStatus`, `LightboxPhase` and
-  `LightboxActivationDirection` are types now; write the strings (`"loading"`, `"open"`,
-  `"left"`) instead of `LightboxMediaStatus.Loading` and the like.
+- **Closed sets are string unions, not enums, named after their part like Base UI's.** Write the
+  strings (`"loading"`, `"open"`, `"left"`) instead of `LightboxMediaStatus.Loading` and the
+  like. `LightboxPhase` is now `LightboxRootPhase`, and `LightboxActivationDirection` is
+  `LightboxRootActivationDirection`. `ThumbnailList`'s `orientation` is typed
+  `LightboxThumbnailListOrientation`.
 
 ### New features
 
