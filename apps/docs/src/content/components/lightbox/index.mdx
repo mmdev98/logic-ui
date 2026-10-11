@@ -209,22 +209,36 @@ The cover size, perspective and depth scale together on smaller screens. The vie
 
 ### 3D models
 
-Each tile shows a live 3D model that spins slowly, rendered with Google's [`<model-viewer>`](https://modelviewer.dev). Each model is its own one-item lightbox, like the profile photo. In the viewer, drag to rotate it; Escape or the close button flies it back to its tile.
+An armory of live 3D weapons, rendered with Google's [`<model-viewer>`](https://modelviewer.dev) and grouped by class. A weapon turns on its tile under the pointer, and they all open in one viewer: drag to rotate the weapon shown, and move between them with the arrows, the cards or ← →. The cards are grouped by class too, and the indicator, corner brackets with a lit bar, glides along with the slides. Escape or the close button flies the weapon back to its tile, turned the way you left it.
 
-`Lightbox.Media` takes any content, so the model's element goes inside it with a `width` and `height` for its shape. Only images zoom, so the zoom gestures leave it alone. Its drags would normally swipe or pull the viewer closed: mark the element with Base UI's `data-base-ui-swipe-ignore` and the viewer leaves every press on it to the model. Set it to `"x"` or `"y"` to keep only the drags along that axis, so a drag along the other one still swipes or pulls, as in a Base UI drawer. Content without an `<img>` or `<video>` counts as loaded, so the viewer opens at once.
+`Lightbox.Media` takes any content, so the model's element goes inside it with a `width` and `height` for its shape. Only images zoom, so the zoom gestures leave it alone. Its drags would normally swipe or pull the viewer closed: mark the element with Base UI's `data-base-ui-swipe-ignore` and the viewer leaves every press on it to the model. Set it to `"x"` or `"y"` to keep only the drags along that axis, so a drag along the other one still swipes or pulls, as in a Base UI drawer.
 
-The viewer carries on from the tile, mid-turn and mid-animation, because it shows the same `<model-viewer>` element: the demo creates one per model outside React. Before it opens, the viewer is mounted out of sight, and a ref callback on the model's place in it moves the element in, so it flies out of the tile; the ref's cleanup puts it back once the viewer unmounts, after the flight home. Nothing is copied or loaded twice. `onOpenChange` holds it still during both flights, so it isn't redrawn on every frame of them, and `onOpenChangeComplete` lets it carry on once it lands.
+The viewer carries on from the tile, mid-turn and mid-animation, because it shows the same `<model-viewer>` element: the demo creates one per model outside React and moves it between its tile and its slide. Nothing is copied or loaded twice.
+
+- **Ready before it flies.** Before it opens, the viewer is mounted out of sight. A ref callback on each slide moves its model in, and `onOpenChange` returns a Promise that waits until the model shown has drawn itself at the viewer's size. Only then does it fly, so its first frame is already sharp and the right size.
+- **Never an empty tile.** A weapon that leaves its tile leaves a still of itself, from `toDataURL()`, in its place. When the viewer closes, the still is taken again, so the tile shows the model as it was turned. Once the model is back and has drawn, the still goes. The thumbnails are stills too.
+- **Smooth flights.** Every model holds still during the flights, so it isn't redrawn on every frame of them. Once the viewer has landed, only the model shown moves.
+- **The angle you left it at.** On its own, a moved `<model-viewer>` goes back to its `camera-orbit`. The demo writes the current orbit into it before each move.
 
 <Demo src="./demos/models.tsx" />
 
 ```tsx title="A 3D model"
-// The model's <model-viewer> moves in here as the viewer opens.
-<Lightbox.Media width={1} height={1}>
-  <div ref={viewerHostRef} data-base-ui-swipe-ignore="" />
-</Lightbox.Media>
+<Lightbox.Root
+  items={models}
+  // The viewer waits for this before the model flies out of its tile.
+  onOpenChange={async (open) => {
+    if (open) await modelDrawnInViewer();
+  }}
+>
+  …
+  <Lightbox.Media width={1} height={1}>
+    {/* The model's <model-viewer> moves in here when the slide mounts. */}
+    <div ref={hostRef(model.id)} data-base-ui-swipe-ignore="" />
+  </Lightbox.Media>
+</Lightbox.Root>
 ```
 
-The models are Khronos glTF sample assets, credited under each tile.
+The models are by austincford on [Poly Pizza](https://poly.pizza/u/austincford), under CC BY 3.0.
 
 ### Controlled and changing items
 
