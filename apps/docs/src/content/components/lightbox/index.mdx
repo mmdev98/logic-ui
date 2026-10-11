@@ -207,9 +207,28 @@ The cover size, perspective and depth scale together on smaller screens. The vie
 </Lightbox.Viewport>
 ```
 
+### 3D models
+
+Each tile shows a live 3D model that spins slowly, rendered with Google's [`<model-viewer>`](https://modelviewer.dev). Each model is its own one-item lightbox, like the profile photo. In the viewer, drag to rotate it; Escape or the close button flies it back to its tile.
+
+`Lightbox.Media` takes any content, so the model's element goes inside it with a `width` and `height` for its shape. Only images zoom, so the zoom gestures leave it alone. Its drags would normally swipe or pull the viewer closed: mark the element with Base UI's `data-base-ui-swipe-ignore` and the viewer leaves every press on it to the model. Set it to `"x"` or `"y"` to keep only the drags along that axis, so a drag along the other one still swipes or pulls, as in a Base UI drawer. Content without an `<img>` or `<video>` counts as loaded, so the viewer opens at once.
+
+The viewer carries on from the tile, mid-turn and mid-animation, because it shows the same `<model-viewer>` element: the demo creates one per model outside React. Before it opens, the viewer is mounted out of sight, and a ref callback on the model's place in it moves the element in, so it flies out of the tile; the ref's cleanup puts it back once the viewer unmounts, after the flight home. Nothing is copied or loaded twice. `onOpenChange` holds it still during both flights, so it isn't redrawn on every frame of them, and `onOpenChangeComplete` lets it carry on once it lands.
+
+<Demo src="./demos/models.tsx" />
+
+```tsx title="A 3D model"
+// The model's <model-viewer> moves in here as the viewer opens.
+<Lightbox.Media width={1} height={1}>
+  <div ref={viewerHostRef} data-base-ui-swipe-ignore="" />
+</Lightbox.Media>
+```
+
+The models are Khronos glTF sample assets, credited under each tile.
+
 ### Controlled and changing items
 
-The viewer's state is one value: the open item's, or `null` while it is closed. Control it with `value` and `onValueChange`, here shown in an address bar as an app would put it in the URL. Changing `value` while the viewer is open slides to the new item, as Next does.
+The viewer's state is two values, each of which you can control: whether it is open, with `open` and `onOpenChange`, and the item it shows, with `value` and `onValueChange`. Here they are shown in an address bar, as an app would put them in the URL. The value stays on the last item shown after the viewer closes, and is the first item until one is set. Changing `value` while the viewer is open slides to the new item, as Next does. A trigger calls `onValueChange` when it shows another item, then `onOpenChange`; `handle.open(value)` does the same.
 
 `items` can change at any time, even while the viewer is open: it stays on the same item. Delete the open photo from the viewer and it moves to the neighbour; delete the last one and it closes. Add photos and the counter follows.
 
