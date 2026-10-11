@@ -128,7 +128,7 @@ src/lightbox/
 │   ├── lightbox-geometry.ts                pure helpers, grouped by topic
 │   └── lightbox-geometry.test.ts
 ├── constants.ts                            LIGHTBOX_ZOOM_SCALE …
-├── types.ts                                value types and enums shared by the parts
+├── types.ts                                value types and unions shared by the parts
 ├── use-lightbox-action.tsx                 hooks shared by several parts
 ├── test-utils.tsx                          test helpers shared by the part tests
 ├── index.parts.ts                          parts under their short names
@@ -141,7 +141,7 @@ src/lightbox/
 - Import across part folders by exact path (`../root/lightbox-root-context`), never through `index.ts`.
 - `index.parts.ts` re-exports the parts under their short names (`export { ClipboardRoot as Root }`).
 - `index.ts` exports the namespace first (`export * as Clipboard from "./index.parts"`), then the full
-  names, context hooks, value types, props types, state types, enums and constants, and the data
+  names, context hooks, value types, props types, state types, union types and constants, and the data
   attribute and CSS variable docs as namespaces
   (`export * as LightboxPopupDataAttributes from "./popup/lightbox-popup-data-attributes"`). Hooks and
   types are never namespace members: `useClipboardRootContext`, not `Clipboard.useRootContext`.
@@ -282,11 +282,15 @@ throw new Error(
 );
 ```
 
-### Constants and enums
+### Constants and unions
 
 - Fixed module-level values are `SCREAMING_SNAKE_CASE` with the component prefix
   (`CLIPBOARD_DEFAULT_TIMEOUT`) in `constants.ts`, and they are exported.
-- Use a TS `enum` for a closed set of values (`enum ZoomPanMode { Pan = "pan" }`), not a string union.
+- Type a closed set of values as a string union, never a TS `enum`: `type LightboxCloseTarget = "active" | "opener" | "nearest"`.
+  Callers write the plain string (`closeTarget="opener"`) without importing anything. This holds for
+  props, state, callback arguments (`eventDetails.reason`) and context values. Document every value
+  as a list item in the type's JSDoc, or in the prop's JSDoc for an inline union (``- `"opener"`: …``):
+  the API table lists each value of the prop with its note. Internal sets that never leave a file may stay an `enum`.
 
 ## Tests
 
@@ -335,7 +339,7 @@ are tried by hand: there is no separate playground.
 - **API tables.** Write `<ApiReference component="lightbox" parts={["Root", "Trigger"]} />` on one line
   (`parts` is optional and sets the order). `src/lib/api.ts` reads the parts, their props and JSDoc,
   the `*-data-attributes.ts` and `*-css-vars.ts` files next to each part, and the value types and
-  enums exported from `index.ts`, with the TypeScript compiler API. So the JSDoc rules above are
+  string unions exported from `index.ts`, with the TypeScript compiler API. So the JSDoc rules above are
   what the docs show.
 - **Search and llms.txt** are static routes built from the same MDX: `/search-index.json`,
   `/llms.txt` (an index linking each page's Markdown) and `/md/<slug>.md`.
