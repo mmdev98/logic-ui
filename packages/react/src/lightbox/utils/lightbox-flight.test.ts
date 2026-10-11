@@ -5,6 +5,7 @@ import {
   getLightboxFadedState,
   getLightboxFlightKeyframe,
   getLightboxFlightKeyframes,
+  getLightboxFlightOffset,
   getLightboxFlightRadii,
   getLightboxMovedState,
   getLightboxReleaseEasing,
@@ -297,5 +298,24 @@ describe("createLightboxStandIn", () => {
     expect(standIn.style.pointerEvents).toBe("none");
     // The trigger itself is untouched.
     expect(trigger.hasAttribute("data-flying")).toBe(true);
+  });
+});
+
+describe("getLightboxFlightOffset", () => {
+  it("measures a state from the media at rest: centre offset and width share", () => {
+    expect(getLightboxFlightOffset(tile, box)).toEqual({
+      // The tile's centre (40, 50) from the box's (400, 300).
+      x: -360,
+      y: -250,
+      scale: 0.15,
+    });
+  });
+
+  it("is no offset at rest", () => {
+    expect(getLightboxFlightOffset(getLightboxRestState(box), box)).toEqual({
+      x: 0,
+      y: 0,
+      scale: 1,
+    });
   });
 });

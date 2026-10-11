@@ -277,6 +277,21 @@ export function createLightboxStandIn(trigger: HTMLElement): HTMLElement {
   return standIn;
 }
 
+/**
+ * Where a flight state is relative to the media at rest in `box`: how far
+ * its centre is from the box's, and its width as a share of the box's.
+ */
+export function getLightboxFlightOffset(
+  state: LightboxFlightState,
+  box: LightboxRect,
+): { x: number; y: number; scale: number } {
+  return {
+    x: state.rect.left + state.rect.width / 2 - (box.left + box.width / 2),
+    y: state.rect.top + state.rect.height / 2 - (box.top + box.height / 2),
+    scale: box.width > 0 ? state.rect.width / box.width : 1,
+  };
+}
+
 export function prefersLightboxReducedMotion(win: Window): boolean {
   return win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }

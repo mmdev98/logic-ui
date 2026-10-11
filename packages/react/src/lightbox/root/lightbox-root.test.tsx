@@ -667,6 +667,30 @@ describe("Lightbox.Root closeTarget", () => {
     }
   });
 
+  it("writes where the image flies, for content that goes with it", async () => {
+    mockLayout();
+    const animations = mockAnimate();
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 1 of 3");
+    await finish(animations.at(-1));
+    const popup = screen.getByTestId("popup");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+
+    // The 100 px trigger, a quarter of the 400 px image at rest.
+    expect(popup.style.getPropertyValue("--lightbox-flight-scale")).toBe(
+      "0.25",
+    );
+    expect(
+      popup.style.getPropertyValue("--lightbox-flight-movement-x"),
+    ).toMatch(/^-?\d+px$/);
+    expect(
+      popup.style.getPropertyValue("--lightbox-flight-movement-y"),
+    ).toMatch(/^-?\d+px$/);
+  });
+
   it("starts the flight back at the speed of a pull to dismiss", async () => {
     mockLayout();
     const animations = mockAnimate();

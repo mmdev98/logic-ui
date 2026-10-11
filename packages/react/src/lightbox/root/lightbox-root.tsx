@@ -35,6 +35,7 @@ import {
   createLightboxStandIn,
   getLightboxFadedState,
   getLightboxFlightKeyframes,
+  getLightboxFlightOffset,
   getLightboxFlightRadii,
   getLightboxMovedState,
   getLightboxReleaseEasing,
@@ -70,6 +71,9 @@ import { getLightboxActivationDirection } from "../utils/lightbox-motion";
 import {
   flightDuration,
   flightEasing,
+  flightMovementX,
+  flightMovementY,
+  flightScale,
   swipeMovementX,
   swipeProgress,
   swipeStrength,
@@ -583,6 +587,9 @@ export function LightboxRoot<Item = unknown>(
     if (element.style.getPropertyValue(flightDuration)) return;
     element.style.setProperty(flightDuration, `${LIGHTBOX_FLIGHT_DURATION}ms`);
     element.style.setProperty(flightEasing, LIGHTBOX_FLIGHT_EASING);
+    element.style.setProperty(flightMovementX, "0px");
+    element.style.setProperty(flightMovementY, "0px");
+    element.style.setProperty(flightScale, "1");
   };
 
   /** Writes the flight's length and curve, for transitions that follow it. */
@@ -591,6 +598,19 @@ export function LightboxRoot<Item = unknown>(
       element?.style.setProperty(flightDuration, `${duration}ms`);
       element?.style.setProperty(flightEasing, easing);
     }
+  };
+
+  /** Writes where the image flies to or from, for content that goes with it. */
+  const writeFlightOffset = (state: LightboxFlightState, box: LightboxRect) => {
+    const popup = popupRef.current;
+    if (!popup) return;
+    const offset = getLightboxFlightOffset(state, box);
+    popup.style.setProperty(flightMovementX, `${Math.round(offset.x)}px`);
+    popup.style.setProperty(flightMovementY, `${Math.round(offset.y)}px`);
+    popup.style.setProperty(
+      flightScale,
+      String(Math.round(offset.scale * 1000) / 1000),
+    );
   };
 
   /**
@@ -611,6 +631,8 @@ export function LightboxRoot<Item = unknown>(
     fill: FillMode,
   ) => {
     const duration = LIGHTBOX_FLIGHT_DURATION;
+    // The end away from the viewer: where it lands, or where it comes from.
+    writeFlightOffset(fill === "forwards" ? to : from, box);
     writeFlightVariables(
       duration,
       easing === FLIGHT_EASING

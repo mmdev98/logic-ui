@@ -15,6 +15,29 @@ export const flightDuration = "--lightbox-flight-duration";
 export const flightEasing = "--lightbox-flight-easing";
 
 /**
+ * How far the image flies from where it rests in the viewer, horizontally:
+ * to the trigger it lands on when the viewer closes, from the trigger it
+ * leaves when it opens. Set at the start of each flight. Move other content
+ * along with the image: `translate: var(--lightbox-flight-movement-x)
+ * var(--lightbox-flight-movement-y)`, with `--lightbox-flight-duration`.
+ * @type {CSS length}
+ */
+export const flightMovementX = "--lightbox-flight-movement-x";
+
+/**
+ * The same, vertically.
+ * @type {CSS length}
+ */
+export const flightMovementY = "--lightbox-flight-movement-y";
+
+/**
+ * The image's size at that trigger, as a share of its size in the viewer:
+ * `0.2` when it lands on a tile a fifth as wide. `1` before any flight.
+ * @type {number}
+ */
+export const flightScale = "--lightbox-flight-scale";
+
+/**
  * Progress of the pull to dismiss: 0 at rest, 1 at the closing
  * distance. Fade with `opacity: calc(1 - var(--lightbox-dismiss-progress, 0))`.
  * @type {number}
