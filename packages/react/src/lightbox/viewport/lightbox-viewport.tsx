@@ -118,6 +118,8 @@ export function LightboxViewport(
   const offsetRef = React.useRef(0);
   const stopOffsetRef = React.useRef<(() => void) | null>(null);
   const swipeTargetRef = React.useRef<number | null>(null);
+  // The same, for render: the item a swipe goes to isn't a jump.
+  const [swipeTarget, setSwipeTarget] = React.useState<number | null>(null);
   const [visibleRange, setVisibleRange] = React.useState({
     start: index,
     end: index,
@@ -198,8 +200,9 @@ export function LightboxViewport(
   const [lastIndex, setLastIndex] = React.useState(index);
   if (index !== lastIndex) {
     setLastIndex(index);
+    setSwipeTarget(null);
     setJump(
-      Math.abs(index - lastIndex) > 1 && swipeTargetRef.current !== index
+      Math.abs(index - lastIndex) > 1 && swipeTarget !== index
         ? { from: lastIndex, to: index }
         : null,
     );
@@ -301,6 +304,7 @@ export function LightboxViewport(
     setStrength,
     onSwipe: (step) => {
       swipeTargetRef.current = index + step;
+      setSwipeTarget(index + step);
     },
   });
 

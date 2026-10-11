@@ -45,6 +45,11 @@ function getTrack() {
   return screen.getByTestId("viewport").firstElementChild as HTMLElement;
 }
 
+/** The track's horizontal position, in px. */
+function getTrackX() {
+  return parseFloat(getTrack().style.transform.replace("translate3d(", ""));
+}
+
 describe("Lightbox.Viewport", () => {
   it("undoes a scroll, which would move the slides off their places", async () => {
     render(<TestLightbox />);
@@ -586,12 +591,13 @@ describe("Lightbox.Viewport", () => {
       expect(screen.getByTestId("counter").textContent).toBe("1 / 3");
       if (delay !== null) {
         if (delay > 0) await wait(delay);
-        const transform = getTrack().style.transform;
+        const x = getTrackX();
         rerender(
           <TestLightbox value="c" defaultOpen onValueChange={onValueChange} />,
         );
         expect(screen.getByTestId("counter").textContent).toBe("3 / 3");
-        expect(getTrack().style.transform).toBe(transform);
+        // Moving the offset onto the new item may round the last digit.
+        expect(getTrackX()).toBeCloseTo(x, 6);
       }
       await wait(500);
       expect(screen.getByTestId("counter").textContent).toBe(
