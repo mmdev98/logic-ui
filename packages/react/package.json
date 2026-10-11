@@ -231,8 +231,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@base-ui/react": "1.8.0",
-    "@base-ui/utils": "0.4.0"
+    "@base-ui/react": "1.9.0",
+    "@base-ui/utils": "0.5.0"
   },
   "peerDependencies": {
     "@types/react": "^19",
