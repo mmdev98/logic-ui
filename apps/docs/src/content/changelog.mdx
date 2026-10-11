@@ -89,7 +89,7 @@ breaking change is listed under its release.
   `--lightbox-zoom-progress`, and, with `Backdrop`, `--lightbox-dismiss-movement-x` and `-y`.
 - **Custom transitions.** Each `Slide` has `--lightbox-slide-progress`, its distance from the
   centre in slides, and is placed with `translate`, leaving `transform` free for a cube, a fade
-  or a coverflow. `Viewport`'s `neighbors` renders more items on each side (1 by default).
+  or a coverflow. `Viewport`'s `neighbors` renders more items on each side (1 by default), and `--lightbox-swipe-distance` on it sets how far the finger travels for one slide, for slides that sit closer together than the viewport is wide.
 - Changing `value` while the viewer is open slides to the new item, as Next does.
 - `Popup` takes focus when it opens, so its keys work at once; pass `initialFocus` to focus
   another element.

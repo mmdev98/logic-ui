@@ -48,16 +48,21 @@ const local = {
     "isolate overflow-hidden [--cover-size:min(40dvh,58vw,23rem)] [--cover-y:41dvh] [@media(max-height:500px)]:[--cover-y:36dvh]",
   Ambient:
     "pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_40%,rgb(90_100_130/0.18),transparent_65%)] opacity-[calc(1_-_var(--lightbox-dismiss-progress,0))] transition-opacity duration-(--lightbox-flight-duration) ease-(--lightbox-flight-easing) in-data-swiping:transition-none in-data-starting-style:opacity-0 in-data-ending-style:opacity-0 motion-reduce:transition-none",
-  // Pan bounds use the whole viewer, not the smaller resting cover.
+  // Pan bounds use the whole viewer, not the smaller resting cover. While a
+  // finger holds a cover, and while it flies home, it is drawn above
+  // everything else: the reflection and the controls. One slide of finger
+  // travel is `--lightbox-swipe-distance`, so the covers follow the finger.
   Viewport:
-    "absolute inset-0 cursor-grab gap-x-0 select-none data-swiping:cursor-grabbing",
+    "absolute inset-0 cursor-grab gap-x-0 select-none [--lightbox-swipe-distance:calc(var(--cover-size)*2.2)] data-swiping:z-10 data-swiping:cursor-grabbing in-data-ending-style:z-10",
   /**
-   * Placement, rotation and lifecycle motion are separate layers. A smoothstep
-   * curve eases the rotation into the wings without a hard stop at ±1.
+   * Placement, rotation and lifecycle motion are separate layers. The cover
+   * moves linearly (`--l`), 0.68 of a cover per slide next to the centre, so
+   * it follows the finger with `--lightbox-swipe-distance`; a smoothstep curve (`--t`)
+   * eases only its rotation and depth into the wings.
    * Parallel slides sort the flattened covers without intersecting planes.
    */
   Slide:
-    "group/cover px-[calc((100%_-_var(--cover-size))/2)] pt-[calc(var(--cover-y)_-_var(--cover-size)/2)] pb-[calc(100dvh_-_var(--cover-y)_-_var(--cover-size)/2)] [--p:var(--lightbox-slide-progress)] [--distance:max(var(--p),-1*var(--p))] [--t:calc(clamp(-1,var(--p),1)*min(1,var(--distance))*(3_-_2*min(1,var(--distance))))] [--depth:max(var(--t),-1*var(--t))] [transform:translateX(calc((var(--t)*0.68_+_(var(--p)_-_var(--t))*0.24)*var(--cover-size)_-_var(--p)*100%))_translateZ(calc(var(--distance)*-1px))] [opacity:clamp(0,calc(3.5_-_var(--distance)),1)] motion-reduce:transform-none motion-reduce:opacity-100",
+    "group/cover px-[calc((100%_-_var(--cover-size))/2)] pt-[calc(var(--cover-y)_-_var(--cover-size)/2)] pb-[calc(100dvh_-_var(--cover-y)_-_var(--cover-size)/2)] [--p:var(--lightbox-slide-progress)] [--l:clamp(-1,var(--p),1)] [--distance:max(var(--p),-1*var(--p))] [--t:calc(clamp(-1,var(--p),1)*min(1,var(--distance))*(3_-_2*min(1,var(--distance))))] [--depth:max(var(--t),-1*var(--t))] [transform:translateX(calc((var(--l)*0.68_+_(var(--p)_-_var(--l))*0.24)*var(--cover-size)_-_var(--p)*100%))_translateZ(calc(var(--distance)*-1px))] [opacity:clamp(0,calc(3.5_-_var(--distance)),1)] motion-reduce:transform-none motion-reduce:opacity-100",
   /**
    * Each cover tilts inward in its own perspective, flattened into its slide.
    * Depth scales with the cover, so phones and desktops share the same shape.
@@ -71,7 +76,7 @@ const local = {
   // Zoom and pan transform the image, so its frame must live here too.
   Image: "rounded-[inherit] shadow-2xl shadow-black/50 ring-1 ring-white/10",
   Reflection:
-    "pointer-events-none absolute top-[calc(var(--cover-y)+var(--cover-size)/2+0.75rem)] left-1/2 h-[calc(var(--cover-size)/2)] w-(--cover-size) -translate-x-1/2 overflow-hidden mask-b-from-0% mask-b-to-100% opacity-15 transition-opacity duration-(--lightbox-flight-duration) ease-(--lightbox-flight-easing) in-data-starting-style:opacity-0 in-data-ending-style:opacity-0 in-data-zoomed:opacity-0 motion-reduce:hidden motion-reduce:transition-none",
+    "pointer-events-none absolute top-[calc(var(--cover-y)+var(--cover-size)/2+0.75rem)] left-1/2 h-[calc(var(--cover-size)/2)] w-(--cover-size) -translate-x-1/2 overflow-hidden mask-b-from-0% mask-b-to-100% opacity-[calc(0.15*(1_-_var(--lightbox-dismiss-progress,0)*2))] transition-opacity duration-(--lightbox-flight-duration) ease-(--lightbox-flight-easing) in-data-swiping:transition-none in-data-starting-style:opacity-0 in-data-ending-style:opacity-0 in-data-zoomed:opacity-0 motion-reduce:hidden motion-reduce:transition-none",
   ReflectionImage: "block aspect-square w-full -scale-y-100 rounded-xl",
   Footer: cn(
     classes.controlBottom,

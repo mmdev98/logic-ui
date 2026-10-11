@@ -162,7 +162,7 @@ The stories turn like the faces of a cube, in CSS only. Each `Lightbox.Slide` ha
 
 ### 3D coverflow
 
-The same variable makes a coverflow. `neighbors={3}` on `Lightbox.Viewport` renders three covers on each side, instead of one.
+The same variable makes a coverflow. `neighbors={3}` on `Lightbox.Viewport` renders three covers on each side, instead of one. The covers sit closer together than the viewport is wide, so `--lightbox-swipe-distance` on the viewport sets how far the finger travels for one cover, as any CSS length (`[--lightbox-swipe-distance:calc(var(--cover-size)*2.2)]`), and the covers keep up with the finger instead of lagging behind it. Slides placed side by side don't need it, even when the media is smaller than the viewport: the media moves with its slide. While you hold a cover, the viewport has `data-swiping`; raising it (`data-swiping:z-10`) draws the cover above its reflection and the controls.
 
 The structure separates four jobs:
 
@@ -177,7 +177,10 @@ The cover size, perspective and depth scale together on smaller screens. The vie
 
 ```tsx title="Coverflow"
 // The classes and the progress curve are in the demo's source.
-<Lightbox.Viewport neighbors={3}>
+<Lightbox.Viewport
+  neighbors={3}
+  className="[--lightbox-swipe-distance:calc(var(--cover-size)*2.2)]"
+>
   {(album) => (
     <Lightbox.Slide className={local.Slide}>
       <div className={local.Turn}>
