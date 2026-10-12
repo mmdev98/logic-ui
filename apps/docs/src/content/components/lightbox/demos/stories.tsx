@@ -254,7 +254,7 @@ const local = {
    * comes in from the right, and the face turning away darkens.
    */
   Slide:
-    "cursor-default p-4 select-none [transform-origin:clamp(0%,calc(50%_-_var(--lightbox-slide-progress)*10000%),100%)_50%] [transform:rotateY(calc(var(--lightbox-slide-progress)*90deg))] [backface-visibility:hidden] [filter:brightness(calc(1_-_min(1,max(var(--lightbox-slide-progress),-1*var(--lightbox-slide-progress)))*0.6))] motion-reduce:[transform:none]",
+    "cursor-default select-none [transform-origin:clamp(0%,calc(50%_-_var(--lightbox-slide-progress)*10000%),100%)_50%] [transform:rotateY(calc(var(--lightbox-slide-progress)*90deg))] [backface-visibility:hidden] [filter:brightness(calc(1_-_min(1,max(var(--lightbox-slide-progress),-1*var(--lightbox-slide-progress)))*0.6))] motion-reduce:[transform:none]",
   // The card: the story with its controls on it, filling the slide whatever
   // the shape of the photo or video, which covers it. It clips them to its
   // corners, square on a phone, where it fills the screen.

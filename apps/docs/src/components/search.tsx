@@ -121,7 +121,10 @@ export function Search(): React.ReactElement {
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger className="flex h-8 cursor-pointer items-center gap-2 border border-line bg-panel pr-1.5 pl-2.5 text-sm text-faint transition-colors hover:border-line-strong hover:text-muted sm:w-56">
+      <Dialog.Trigger
+        aria-label="Search docs"
+        className="flex size-8 cursor-pointer items-center justify-center gap-2 border border-line bg-panel text-sm text-faint transition-colors hover:border-line-strong hover:text-muted sm:w-56 sm:justify-start sm:pr-1.5 sm:pl-2.5"
+      >
         <SearchIcon />
         <span className="hidden sm:inline">Search docs</span>
         <kbd className="ml-auto hidden border border-line px-1.5 font-mono text-[10px] text-faint sm:inline">

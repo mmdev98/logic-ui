@@ -35,7 +35,7 @@ export function DemoFrame(props: {
 
       <Tabs.Root value={file} onValueChange={(value) => setFile(String(value))}>
         <div className="flex h-10 items-center gap-2 border-t border-line bg-panel pr-1.5 pl-2">
-          <Collapsible.Trigger className="group flex h-7 cursor-pointer items-center gap-1.5 px-2 font-mono text-xs text-muted hover:bg-raised hover:text-fg">
+          <Collapsible.Trigger className="group flex h-7 shrink-0 cursor-pointer items-center gap-1.5 px-2 font-mono text-xs whitespace-nowrap text-muted hover:bg-raised hover:text-fg">
             <span
               aria-hidden
               className="transition-transform group-data-panel-open:rotate-90"

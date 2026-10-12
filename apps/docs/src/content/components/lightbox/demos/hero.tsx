@@ -2,7 +2,9 @@
 import * as React from "react";
 import { Lightbox } from "@logic-ui/react/lightbox";
 import { Toolbar } from "@logic-ui/react/toolbar";
-import { getThumbnailSrc, type MediaItem, photos, videos } from "./_photos";
+import { useMediaQuery } from "@logic-ui/react/unstable-use-media-query";
+import { cn } from "cn";
+import { getThumbnailSrc, type MediaItem, videos } from "./_photos";
 import {
   ChevronIcon,
   CloseIcon,
@@ -14,11 +16,17 @@ import { classes } from "./_classes";
 
 /** Tailwind classes of this demo. */
 const local = {
-  // One large tile and four small ones. The outer corners are on the tiles,
-  // not clipped by the grid: the image flies out of each tile with its corners.
+  // One large tile and four small ones beside it. On phones, like Instagram's
+  // Explore: three columns of squares, the large tile two by two, and five
+  // small ones around it. The outer corners are on the tiles, not clipped by
+  // the grid: the image flies out of each tile with its corners.
   Layout:
-    "grid w-full max-w-xl grid-cols-[2fr_1fr_1fr] grid-rows-[repeat(2,8rem)] gap-1.5 select-none",
-  Tile: "first:row-span-2 first:rounded-l-2xl nth-3:rounded-tr-2xl last:rounded-br-2xl",
+    "grid w-full max-w-xl grid-cols-3 gap-1 select-none sm:grid-cols-[2fr_1fr_1fr] sm:grid-rows-[repeat(2,8rem)] sm:gap-1.5",
+  Tile: cn(
+    "aspect-square first:col-span-2 first:row-span-2 first:aspect-auto sm:aspect-auto sm:first:col-span-1",
+    "first:rounded-tl-2xl nth-2:rounded-tr-2xl nth-4:rounded-bl-2xl nth-6:rounded-br-2xl",
+    "sm:first:rounded-l-2xl sm:nth-2:rounded-none sm:nth-3:rounded-tr-2xl sm:nth-4:rounded-none sm:nth-5:rounded-br-2xl",
+  ),
   // Over the last tile: how many items the grid doesn't show.
   More: "absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-semibold text-white tabular-nums backdrop-blur-[2px] transition-colors duration-300 group-hover:bg-black/45",
   // Marks a video tile.
@@ -27,7 +35,9 @@ const local = {
   // Room below the media for the caption and the strip.
   Slide:
     "px-[max(1rem,env(safe-area-inset-left))] pt-[calc(4.5rem+env(safe-area-inset-top))] pb-[calc(11rem+env(safe-area-inset-bottom))] md:px-24",
-  Actions: "flex items-center gap-2",
+  // Not on phones: the toolbar needs the room, and the strip shows where you are.
+  Counter: `${classes.counter} max-sm:hidden`,
+  Actions: "ms-auto flex items-center gap-2",
   // As tall as the close button, so the top bar lines up.
   Toolbar:
     "flex h-10 items-center gap-0.5 rounded-full border border-white/10 bg-neutral-900/80 px-px backdrop-blur-xl",
@@ -54,23 +64,87 @@ const local = {
   Key: "min-w-5 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-center font-[inherit] text-[0.6875rem]",
 };
 
-/** Photos and videos, in one viewer. */
+/** A Picsum photo, cropped to `width` × `height`. */
+function photo(
+  id: string,
+  picsumId: number,
+  width: number,
+  height: number,
+  alt: string,
+  caption: string,
+): MediaItem {
+  return {
+    id,
+    type: "image",
+    src: `https://picsum.photos/id/${picsumId}/${width}/${height}`,
+    width,
+    height,
+    alt,
+    caption,
+  };
+}
+
+/** Cars and houses, and a video first, for the large tile. */
 const items: MediaItem[] = [
-  { ...photos[0], type: "image" },
-  videos[0],
-  { ...photos[2], type: "image" },
   videos[1],
-  { ...photos[5], type: "image" },
-  { ...photos[7], type: "image" },
-  { ...photos[1], type: "image" },
-  { ...photos[3], type: "image" },
-  { ...photos[4], type: "image" },
-  { ...photos[6], type: "image" },
+  photo(
+    "vintage-car",
+    111,
+    1600,
+    1067,
+    "A vintage car on a city street",
+    "Farmer boy",
+  ),
+  photo(
+    "green-door",
+    946,
+    1067,
+    1600,
+    "A green door in a yellow house",
+    "Number 2",
+  ),
+  photo("camper", 655, 1600, 1067, "A blue camper van at dusk", "Blue camper"),
+  photo("santorini", 49, 1600, 1067, "White houses of Santorini", "Santorini"),
+  photo(
+    "garage",
+    133,
+    1600,
+    1067,
+    "Two classic cars before yellow garage doors",
+    "Twins",
+  ),
+  videos[0],
+  photo("canal", 164, 1600, 1067, "Houses along a canal", "Canal houses"),
+  photo("truck", 1072, 1600, 1067, "A rusty truck in a field", "Retired"),
+  photo(
+    "off-roader",
+    514,
+    1067,
+    1600,
+    "A white off-roader by a wooden house",
+    "Off-roader",
+  ),
+  photo("shed", 76, 1600, 1067, "A bicycle against a wooden house", "The shed"),
+  photo(
+    "grille",
+    1071,
+    1600,
+    1600,
+    "The chrome grille of a classic car",
+    "Chrome",
+  ),
+  photo("van", 183, 1600, 1067, "A camper van in a car park", "Parked"),
 ];
 
-/** The grid shows the first five; the last tile counts the rest. */
-const TILES = 5;
-const hiddenCount = items.length - TILES;
+/**
+ * How many tiles the grid shows; the last one counts the rest. Six on
+ * phones, where the large tile is two columns wide, so the grid is full.
+ * Counted here, not hidden with CSS: a closing image flies to the nearest
+ * tile, and a hidden one has nowhere to land.
+ */
+function useTileCount(): number {
+  return useMediaQuery("(min-width: 40rem)", {}) ? 5 : 6;
+}
 
 const shortcuts = [
   ["← →", "Previous / next"],
@@ -108,18 +182,21 @@ function Preview(props: {
 }
 
 export default function ExampleLightbox() {
+  const tiles = useTileCount();
+  const hiddenCount = items.length - tiles;
+
   return (
-    // The items without a tile fly back into the "+5" tile, the nearest
-    // one, and dissolve into it.
+    // The items without a tile fly back into the tile with the count, the
+    // nearest one, and dissolve into it.
     <Lightbox.Root items={items} closeTarget="nearest">
       <div className={local.Layout}>
-        {items.slice(0, TILES).map((item, index) => {
-          const isLast = index === TILES - 1;
+        {items.slice(0, tiles).map((item, index) => {
+          const isLast = index === tiles - 1;
           return (
             <Lightbox.Trigger
               key={item.id}
               value={item.id}
-              // The "+5" and the play badge aren't in the viewer: they fade
+              // The count and the play badge aren't in the viewer: they fade
               // out as the image leaves the tile, and back in as it lands.
               crossfade={isLast || item.type === "video"}
               aria-label={
@@ -180,7 +257,7 @@ export default function ExampleLightbox() {
           </Lightbox.Viewport>
 
           <header className={`${classes.topBar} ${classes.controlTop}`}>
-            <Lightbox.Counter className={classes.counter} />
+            <Lightbox.Counter className={local.Counter} />
             <div className={local.Actions}>
               <Toolbar.Root className={local.Toolbar}>
                 <Lightbox.Previous

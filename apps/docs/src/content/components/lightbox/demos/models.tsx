@@ -192,11 +192,12 @@ const local = {
     "in-data-starting-style:-translate-y-3 in-data-ending-style:-translate-y-3",
   ),
   Breadcrumb:
-    "m-0 flex items-center gap-2 font-mono text-[0.6875rem] tracking-[0.25em] text-[#8a9384] uppercase [&_b]:font-normal [&_b]:text-[#c6f432]",
+    "m-0 flex items-center gap-2 font-mono text-[0.6875rem] tracking-[0.25em] whitespace-nowrap text-[#8a9384] uppercase [&_b]:font-normal [&_b]:text-[#c6f432]",
   // The name slides in from the side the weapon came from.
   Name: "m-0 mt-1 text-4xl leading-none font-black tracking-[0.08em] text-white uppercase transition-[opacity,translate] duration-300 ease-out data-starting-style:opacity-0 data-starting-style:transition-none data-starting-style:data-[activation-direction=left]:-translate-x-6 data-starting-style:data-[activation-direction=right]:translate-x-6 sm:text-5xl",
+  // Not on phones, where the cards below show where you are.
   Counter:
-    "font-mono text-sm tracking-widest text-[#8a9384] tabular-nums [&_b]:font-normal [&_b]:text-white",
+    "hidden font-mono text-sm tracking-widest whitespace-nowrap sm:block text-[#8a9384] tabular-nums [&_b]:font-normal [&_b]:text-white",
   TopActions: "flex items-center gap-4",
   Square:
     "flex size-10 cursor-pointer items-center justify-center border border-white/15 bg-black/40 text-white transition-[border-color,background-color] duration-150 hover:border-[#c6f432] hover:bg-[#c6f432]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c6f432] [&_svg]:size-4",

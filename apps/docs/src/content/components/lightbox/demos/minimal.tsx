@@ -11,12 +11,13 @@ const items = photos.slice(0, 4);
 export default function ExampleLightboxMinimal() {
   return (
     <Lightbox.Root items={items}>
-      <div className={classes.row}>
+      {/* Three columns across a phone, a row of squares on larger screens. */}
+      <div className="grid w-full grid-cols-3 gap-2 select-none sm:flex sm:w-auto sm:flex-wrap sm:items-center">
         {items.map((photo) => (
           <Lightbox.Trigger
             key={photo.id}
             value={photo.id}
-            className={`${classes.trigger} size-24 rounded-xl`}
+            className={`${classes.trigger} aspect-square w-full rounded-xl sm:size-24`}
           >
             <img
               src={getThumbnailSrc(photo)}

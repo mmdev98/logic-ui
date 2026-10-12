@@ -21,7 +21,12 @@ export function HeadingAnchor(props: {
   return (
     <Tag
       id={id}
-      className={cn("group/heading scroll-mt-24", STYLES[level], className)}
+      // Long type names wrap anywhere instead of widening a phone's page.
+      className={cn(
+        "group/heading scroll-mt-24 wrap-anywhere",
+        STYLES[level],
+        className,
+      )}
     >
       {children}
       {id ? (

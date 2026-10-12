@@ -13,7 +13,6 @@ const control =
 /** Tailwind classes shared by the lightbox demos. */
 export const classes = {
   // The page around the triggers.
-  row: "flex flex-wrap items-center gap-2 select-none",
   stack: "flex w-full flex-col items-center gap-4 select-none",
   text: "m-0 text-sm text-neutral-400",
   button:
@@ -54,7 +53,7 @@ export const classes = {
     "flex size-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/10 text-white backdrop-blur-md transition-colors hover:not-data-disabled:bg-white/20 data-disabled:cursor-default data-disabled:opacity-35 focus-visible:outline-2 focus-visible:outline-white",
   // As tall as the icon buttons, its text as far from the side as from the top.
   counter:
-    "flex h-10 items-center px-2.5 text-sm font-medium text-white/90 tabular-nums",
+    "flex h-10 items-center px-2.5 text-sm font-medium whitespace-nowrap text-white/90 tabular-nums",
   toolbar:
     "flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-white/10 bg-neutral-900/80 p-1 shadow-2xl backdrop-blur-xl",
   toolbarButton:

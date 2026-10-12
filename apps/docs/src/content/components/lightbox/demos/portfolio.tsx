@@ -42,11 +42,13 @@ const local = {
     "hidden min-w-0 flex-col in-data-[orientation=vertical]:flex [&_span]:truncate [&_span+span]:text-xs [&_span+span]:text-neutral-500",
   // A soft highlight behind the active row, or a ring around the active square.
   Highlight: `${classes.indicator} -z-10 rounded-lg in-data-[orientation=vertical]:bg-white/10 in-data-[orientation=vertical]:outline-none`,
-  // Zoom, on the image's edge: ↑ ↓ move between the actions.
+  // Zoom, on the image's edge on wide screens: ↑ ↓ move between the actions.
+  // On phones, across from Close, where it doesn't cover the image: ← →.
   ZoomBar:
-    "absolute top-[calc(50%-3rem)] end-3 -translate-y-1/2 flex-col md:top-1/2 md:end-[calc(18rem+0.75rem)]",
-  ZoomValue: "py-1 text-center text-[0.6875rem] text-neutral-400 tabular-nums",
-  ZoomSeparator: "my-1 h-px w-4 bg-white/15",
+    "absolute top-[calc(0.75rem+env(safe-area-inset-top))] end-3 md:top-1/2 md:end-[calc(18rem+0.75rem)] md:-translate-y-1/2 md:flex-col",
+  ZoomValue:
+    "px-1 text-center text-[0.6875rem] text-neutral-400 tabular-nums md:px-0 md:py-1",
+  ZoomSeparator: "mx-1 h-4 w-px bg-white/15 md:mx-0 md:my-1 md:h-px md:w-4",
 };
 
 /** Titles for the portfolio. The panorama zooms to 800%. */
@@ -127,8 +129,8 @@ export default function ExampleLightboxPortfolio() {
               </Lightbox.Close>
 
               <Toolbar.Root
-                orientation="vertical"
-                className={`${classes.toolbar} ${local.ZoomBar} ${classes.controlRight}`}
+                orientation={wide ? "vertical" : "horizontal"}
+                className={`${classes.toolbar} ${local.ZoomBar} ${wide ? classes.controlRight : classes.controlTop}`}
               >
                 <Lightbox.ZoomIn
                   render={<Toolbar.Button />}
