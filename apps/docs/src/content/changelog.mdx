@@ -1,6 +1,29 @@
 The package follows semver. Until `1.0.0`, a minor version (`0.x.0`) may break the API; each
 breaking change is listed under its release.
 
+## v0.3.0
+
+October 12, 2026.
+
+### Breaking changes
+
+- **`Lightbox.Media`'s `width` and `height` set the box's shape** when both are given, so every
+  slide can keep the same shape. The loaded media's size is used only when they are missing.
+- **`Lightbox.Media` keeps the `object-fit` you set** on your media. It is contained only when
+  you set none, instead of always.
+
+### New features
+
+- `fill` on `Lightbox.Media` makes the box fill the slide, inside its padding, whatever the
+  shape of the media. The flights and the pull to dismiss use that box.
+
+### Fixes
+
+- A flick past the first or last item springs back at the normal pace, instead of snapping
+  back in about 30 ms.
+- A zoomed image keeps its zoom until it has slid out of sight, instead of snapping to 1x
+  while it slides out. Swiping back to it before then keeps its zoom.
+
 ## v0.2.0
 
 October 12, 2026.
