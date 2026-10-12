@@ -23,6 +23,7 @@ export function GET(): Response {
         (page) =>
           `- [${page.title}](${withBasePath(`/md/${page.slug || "index"}.md`)}): ${page.description}`,
       ),
+      ...(section.links ?? []).map((link) => `- [${link.title}](${link.href})`),
       "",
     ]),
   ].join("\n");

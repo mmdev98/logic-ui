@@ -19,9 +19,17 @@ export interface DocPage {
   badge?: "new" | "preview";
 }
 
+/** A sidebar entry that opens another site instead of a page here. */
+export interface ExternalLink {
+  title: string;
+  href: string;
+}
+
 export interface DocSection {
   title: string;
   pages: DocPage[];
+  /** Listed after the pages; each opens its own site in a new tab. */
+  links?: ExternalLink[];
 }
 
 export const sections: DocSection[] = [
@@ -97,49 +105,6 @@ export const sections: DocSection[] = [
     title: "Components",
     pages: [
       {
-        slug: "components/accordion",
-        title: "Accordion",
-        description: "A set of collapsible panels with headings.",
-        file: "components/accordion/index.mdx",
-      },
-      {
-        slug: "components/alert-dialog",
-        title: "Alert Dialog",
-        description: "A dialog that requires a user response to proceed.",
-        file: "components/alert-dialog/index.mdx",
-      },
-      {
-        slug: "components/autocomplete",
-        title: "Autocomplete",
-        description: "An input that suggests options as you type.",
-        file: "components/autocomplete/index.mdx",
-      },
-      {
-        slug: "components/avatar",
-        title: "Avatar",
-        description: "An easily stylable avatar component.",
-        file: "components/avatar/index.mdx",
-      },
-      {
-        slug: "components/button",
-        title: "Button",
-        description:
-          "A button component that can be rendered as another tag or focusable when disabled.",
-        file: "components/button/index.mdx",
-      },
-      {
-        slug: "components/checkbox",
-        title: "Checkbox",
-        description: "An easily stylable checkbox component.",
-        file: "components/checkbox/index.mdx",
-      },
-      {
-        slug: "components/checkbox-group",
-        title: "Checkbox Group",
-        description: "Provides shared state to a series of checkboxes.",
-        file: "components/checkbox-group/index.mdx",
-      },
-      {
         slug: "components/clipboard",
         title: "Clipboard",
         description:
@@ -147,65 +112,6 @@ export const sections: DocSection[] = [
         file: "components/clipboard/index.mdx",
         api: "clipboard",
         badge: "preview",
-      },
-      {
-        slug: "components/collapsible",
-        title: "Collapsible",
-        description: "A collapsible panel controlled by a button.",
-        file: "components/collapsible/index.mdx",
-      },
-      {
-        slug: "components/combobox",
-        title: "Combobox",
-        description:
-          "An input combined with a list of predefined items to select.",
-        file: "components/combobox/index.mdx",
-      },
-      {
-        slug: "components/context-menu",
-        title: "Context Menu",
-        description:
-          "A menu that appears at the pointer on right click or long press.",
-        file: "components/context-menu/index.mdx",
-      },
-      {
-        slug: "components/dialog",
-        title: "Dialog",
-        description: "A popup that opens on top of the entire page.",
-        file: "components/dialog/index.mdx",
-      },
-      {
-        slug: "components/drawer",
-        title: "Drawer",
-        description: "A panel that slides in from the edge of the screen.",
-        file: "components/drawer/index.mdx",
-      },
-      {
-        slug: "components/field",
-        title: "Field",
-        description:
-          "A component that provides labeling and validation for form controls.",
-        file: "components/field/index.mdx",
-      },
-      {
-        slug: "components/fieldset",
-        title: "Fieldset",
-        description:
-          "A native fieldset element with an easily stylable legend.",
-        file: "components/fieldset/index.mdx",
-      },
-      {
-        slug: "components/form",
-        title: "Form",
-        description: "A native form element with consolidated error handling.",
-        file: "components/form/index.mdx",
-      },
-      {
-        slug: "components/input",
-        title: "Input",
-        description:
-          "A native input element that automatically works with Field.",
-        file: "components/input/index.mdx",
       },
       {
         slug: "components/lightbox",
@@ -216,169 +122,133 @@ export const sections: DocSection[] = [
         api: "lightbox",
         badge: "preview",
       },
+    ],
+  },
+  {
+    title: "Base UI",
+    pages: [],
+    links: [
       {
-        slug: "components/menu",
-        title: "Menu",
-        description:
-          "A list of actions in a dropdown, enhanced with keyboard navigation.",
-        file: "components/menu/index.mdx",
+        title: "Accordion",
+        href: "https://base-ui.com/react/components/accordion",
       },
       {
-        slug: "components/menubar",
+        title: "Alert Dialog",
+        href: "https://base-ui.com/react/components/alert-dialog",
+      },
+      {
+        title: "Autocomplete",
+        href: "https://base-ui.com/react/components/autocomplete",
+      },
+      { title: "Avatar", href: "https://base-ui.com/react/components/avatar" },
+      { title: "Button", href: "https://base-ui.com/react/components/button" },
+      {
+        title: "Checkbox",
+        href: "https://base-ui.com/react/components/checkbox",
+      },
+      {
+        title: "Checkbox Group",
+        href: "https://base-ui.com/react/components/checkbox-group",
+      },
+      {
+        title: "Collapsible",
+        href: "https://base-ui.com/react/components/collapsible",
+      },
+      {
+        title: "Combobox",
+        href: "https://base-ui.com/react/components/combobox",
+      },
+      {
+        title: "Context Menu",
+        href: "https://base-ui.com/react/components/context-menu",
+      },
+      { title: "Dialog", href: "https://base-ui.com/react/components/dialog" },
+      { title: "Drawer", href: "https://base-ui.com/react/components/drawer" },
+      { title: "Field", href: "https://base-ui.com/react/components/field" },
+      {
+        title: "Fieldset",
+        href: "https://base-ui.com/react/components/fieldset",
+      },
+      { title: "Form", href: "https://base-ui.com/react/components/form" },
+      { title: "Input", href: "https://base-ui.com/react/components/input" },
+      { title: "Menu", href: "https://base-ui.com/react/components/menu" },
+      {
         title: "Menubar",
-        description:
-          "A menu bar providing commands and options for your application.",
-        file: "components/menubar/index.mdx",
+        href: "https://base-ui.com/react/components/menubar",
       },
+      { title: "Meter", href: "https://base-ui.com/react/components/meter" },
       {
-        slug: "components/meter",
-        title: "Meter",
-        description: "A graphical display of a numeric value within a range.",
-        file: "components/meter/index.mdx",
-      },
-      {
-        slug: "components/navigation-menu",
         title: "Navigation Menu",
-        description: "A collection of links and menus for website navigation.",
-        file: "components/navigation-menu/index.mdx",
+        href: "https://base-ui.com/react/components/navigation-menu",
       },
       {
-        slug: "components/number-field",
         title: "Number Field",
-        description:
-          "A numeric input element with increment and decrement buttons, and a scrub area.",
-        file: "components/number-field/index.mdx",
+        href: "https://base-ui.com/react/components/number-field",
       },
       {
-        slug: "components/otp-field",
         title: "OTP Field",
-        description:
-          "A one-time password input composed of individual character slots.",
-        file: "components/otp-field/index.mdx",
+        href: "https://base-ui.com/react/components/otp-field",
       },
       {
-        slug: "components/popover",
         title: "Popover",
-        description: "An accessible popup anchored to a button.",
-        file: "components/popover/index.mdx",
+        href: "https://base-ui.com/react/components/popover",
       },
       {
-        slug: "components/preview-card",
         title: "Preview Card",
-        description:
-          "A link that shows a destination preview without interrupting keyboard or screen reader navigation.",
-        file: "components/preview-card/index.mdx",
+        href: "https://base-ui.com/react/components/preview-card",
       },
       {
-        slug: "components/progress",
         title: "Progress",
-        description: "Displays the status of a task that takes a long time.",
-        file: "components/progress/index.mdx",
+        href: "https://base-ui.com/react/components/progress",
       },
+      { title: "Radio", href: "https://base-ui.com/react/components/radio" },
       {
-        slug: "components/radio",
-        title: "Radio",
-        description: "An easily stylable radio button component.",
-        file: "components/radio/index.mdx",
-      },
-      {
-        slug: "components/scroll-area",
         title: "Scroll Area",
-        description: "A native scroll container with custom scrollbars.",
-        file: "components/scroll-area/index.mdx",
+        href: "https://base-ui.com/react/components/scroll-area",
       },
+      { title: "Select", href: "https://base-ui.com/react/components/select" },
       {
-        slug: "components/select",
-        title: "Select",
-        description:
-          "A common form component for choosing a predefined value in a dropdown menu.",
-        file: "components/select/index.mdx",
-      },
-      {
-        slug: "components/separator",
         title: "Separator",
-        description: "A separator element accessible to screen readers.",
-        file: "components/separator/index.mdx",
+        href: "https://base-ui.com/react/components/separator",
       },
+      { title: "Slider", href: "https://base-ui.com/react/components/slider" },
+      { title: "Switch", href: "https://base-ui.com/react/components/switch" },
+      { title: "Tabs", href: "https://base-ui.com/react/components/tabs" },
+      { title: "Toast", href: "https://base-ui.com/react/components/toast" },
+      { title: "Toggle", href: "https://base-ui.com/react/components/toggle" },
       {
-        slug: "components/slider",
-        title: "Slider",
-        description: "An easily stylable range input.",
-        file: "components/slider/index.mdx",
-      },
-      {
-        slug: "components/switch",
-        title: "Switch",
-        description: "A control that indicates whether a setting is on or off.",
-        file: "components/switch/index.mdx",
-      },
-      {
-        slug: "components/tabs",
-        title: "Tabs",
-        description:
-          "A component for toggling between related panels on the same page.",
-        file: "components/tabs/index.mdx",
-      },
-      {
-        slug: "components/toast",
-        title: "Toast",
-        description: "Generates toast notifications.",
-        file: "components/toast/index.mdx",
-      },
-      {
-        slug: "components/toggle",
-        title: "Toggle",
-        description: "A two-state button that can be on or off.",
-        file: "components/toggle/index.mdx",
-      },
-      {
-        slug: "components/toggle-group",
         title: "Toggle Group",
-        description: "Provides a shared state to a series of toggle buttons.",
-        file: "components/toggle-group/index.mdx",
+        href: "https://base-ui.com/react/components/toggle-group",
       },
       {
-        slug: "components/toolbar",
         title: "Toolbar",
-        description: "A container for grouping a set of buttons and controls.",
-        file: "components/toolbar/index.mdx",
+        href: "https://base-ui.com/react/components/toolbar",
       },
       {
-        slug: "components/tooltip",
         title: "Tooltip",
-        description:
-          "A popup that appears when an element is hovered or focused, showing a hint for sighted users.",
-        file: "components/tooltip/index.mdx",
+        href: "https://base-ui.com/react/components/tooltip",
       },
     ],
   },
   {
     title: "Utils",
-    pages: [
+    pages: [],
+    links: [
       {
-        slug: "utils/csp-provider",
         title: "CSP Provider",
-        description:
-          "Configures CSP-related behavior for inline tags rendered by Base UI components.",
-        file: "utils/csp-provider/index.mdx",
+        href: "https://base-ui.com/react/utils/csp-provider",
       },
       {
-        slug: "utils/direction-provider",
         title: "Direction Provider",
-        description: "Enables RTL behavior for Base UI components.",
-        file: "utils/direction-provider/index.mdx",
+        href: "https://base-ui.com/react/utils/direction-provider",
       },
       {
-        slug: "utils/merge-props",
         title: "mergeProps",
-        description: "A utility to merge multiple sets of React props.",
-        file: "utils/merge-props/index.mdx",
+        href: "https://base-ui.com/react/utils/merge-props",
       },
       {
-        slug: "utils/use-render",
         title: "useRender",
-        description: "Hook for enabling a render prop in custom components.",
-        file: "utils/use-render/index.mdx",
+        href: "https://base-ui.com/react/utils/use-render",
       },
     ],
   },

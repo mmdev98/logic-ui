@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { getPageHref, sections } from "@/nav";
+import { ExternalLinkIcon } from "./icons";
 import { PageBadge } from "./page-badge";
 
 export function SidebarNav(props: {
@@ -44,6 +45,20 @@ export function SidebarNav(props: {
                 </li>
               );
             })}
+            {section.links?.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={props.onNavigate}
+                  className="flex h-8 items-center px-3 text-sm text-muted transition-colors hover:bg-panel hover:text-fg"
+                >
+                  {link.title}
+                  <ExternalLinkIcon className="ml-auto text-faint" />
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
       ))}
