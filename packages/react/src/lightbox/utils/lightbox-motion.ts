@@ -5,20 +5,28 @@ import { clampLightboxValue } from "./lightbox-geometry";
 
 /**
  * Strength of a released swipe, 0.1 to 1: how long the slides take to cover
- * the `remaining` distance (px) at the release `velocity` (px/ms), scaled
- * between the fastest and slowest settle. A slow release is `1`. Multiply a
- * duration by it so the motion keeps the swipe's speed, as Base UI's drawer does.
+ * the `distance` (px, signed, from where the track is to where it settles) at
+ * the release `velocity` (px/ms, signed), scaled between the fastest and
+ * slowest settle. A slow release is `1`, and so is one thrown away from where
+ * the track settles, as when it springs back: the throw doesn't carry it
+ * there. Multiply a duration by it so the motion keeps the swipe's speed, as
+ * Base UI's drawer does.
  */
 export function getLightboxSwipeStrength(
-  remaining: number,
+  distance: number,
   velocity: number,
 ): number {
   const { minVelocity, maxVelocity, minDuration, maxDuration, min } =
     LIGHTBOX_SWIPE_STRENGTH;
   const speed = Math.abs(velocity);
-  if (remaining <= 0 || speed <= minVelocity) return 1;
+  if (
+    distance === 0 ||
+    speed <= minVelocity ||
+    Math.sign(distance) !== Math.sign(velocity)
+  )
+    return 1;
   const duration = clampLightboxValue(
-    remaining / clampLightboxValue(speed, minVelocity, maxVelocity),
+    Math.abs(distance) / clampLightboxValue(speed, minVelocity, maxVelocity),
     minDuration,
     maxDuration,
   );

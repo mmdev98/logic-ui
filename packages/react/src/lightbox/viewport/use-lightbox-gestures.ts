@@ -284,11 +284,9 @@ export function useLightboxGestures(
         createLightboxChangeEventDetails(REASONS.swipe, event),
       );
     if (stepped) onSwipe(step);
-    // A flick settles as fast as it was thrown.
-    const remaining = stepped
-      ? Math.abs(offset + step * getStride())
-      : Math.abs(offset);
-    setStrength(getLightboxSwipeStrength(remaining, velocity));
+    // A flick settles as fast as it was thrown; a spring back at its own pace.
+    const target = stepped ? -step * getStride() : 0;
+    setStrength(getLightboxSwipeStrength(target - offset, velocity));
     // If a controlled value stays unchanged, return to it. An accepted
     // change replaces this animation with the transition to the new index.
     animateOffset(0);

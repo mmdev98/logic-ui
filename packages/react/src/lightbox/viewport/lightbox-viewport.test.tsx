@@ -109,6 +109,30 @@ describe("Lightbox.Viewport", () => {
     expect(popup.style.getPropertyValue("--lightbox-swipe-strength")).toBe("1");
   });
 
+  it("springs back at its own pace after a flick past the first item", async () => {
+    render(<TestLightbox />);
+    await openLightboxAt("Open image 1 of 3");
+    const popup = screen.getByTestId("popup");
+    const viewport = screen.getByTestId("viewport");
+    const rest = "translate3d(0px, 0px, 0px)";
+
+    // A fast flick right, where there is no previous item.
+    await act(async () => {
+      firePointer("pointerDown", viewport, 100, 200);
+      firePointer("pointerMove", viewport, 200, 200);
+      firePointer("pointerMove", viewport, 300, 200);
+      firePointer("pointerUp", viewport, 300, 200);
+    });
+
+    expect(popup.style.getPropertyValue("--lightbox-swipe-strength")).toBe("1");
+    expect(getTrack().style.transform).not.toBe(rest);
+    // Still on its way back: the flick doesn't hurry it.
+    await wait(100);
+    expect(getTrack().style.transform).not.toBe(rest);
+    await wait(400);
+    expect(getTrack().style.transform).toBe(rest);
+  });
+
   it("leaves a press on a control inside a slide to that control", async () => {
     const onClick = vi.fn();
     render(

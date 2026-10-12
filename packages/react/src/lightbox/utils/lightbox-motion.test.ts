@@ -16,7 +16,13 @@ describe("getLightboxSwipeStrength", () => {
     // 300 px at 1 px/ms: 300 ms, near the slowest settle.
     expect(getLightboxSwipeStrength(300, 1)).toBeCloseTo(0.807, 3);
     // 300 px at 4 px/ms: 75 ms, clamped to the fastest.
-    expect(getLightboxSwipeStrength(300, -4)).toBe(0.1);
+    expect(getLightboxSwipeStrength(-300, -4)).toBe(0.1);
+  });
+
+  it("is 1 for a flick away from where the track settles", () => {
+    // Thrown right past the first item, the track springs back left.
+    expect(getLightboxSwipeStrength(-40, 4)).toBe(1);
+    expect(getLightboxSwipeStrength(40, -4)).toBe(1);
   });
 });
 
