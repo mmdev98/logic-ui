@@ -26,6 +26,9 @@ const local = {
     "aspect-square first:col-span-2 first:row-span-2 first:aspect-auto sm:aspect-auto sm:first:col-span-1",
     "first:rounded-tl-2xl nth-2:rounded-tr-2xl nth-4:rounded-bl-2xl nth-6:rounded-br-2xl",
     "sm:first:rounded-l-2xl sm:nth-2:rounded-none sm:nth-3:rounded-tr-2xl sm:nth-4:rounded-none sm:nth-5:rounded-br-2xl",
+    // The page is rendered with the phone's six tiles, until the media query
+    // is read: on larger screens, the sixth waits hidden.
+    "sm:nth-6:hidden",
   ),
   // Over the last tile: how many items the grid doesn't show.
   More: "absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-semibold text-white tabular-nums backdrop-blur-[2px] transition-colors duration-300 group-hover:bg-black/45",
@@ -214,6 +217,12 @@ export default function ExampleLightbox() {
               {isLast ? (
                 <span className={local.More} aria-hidden>
                   +{hiddenCount}
+                </span>
+              ) : index === 4 ? (
+                // The count of the larger screens' five tiles, for while the
+                // phone's six are rendered.
+                <span className={cn(local.More, "max-sm:hidden")} aria-hidden>
+                  +{items.length - 5}
                 </span>
               ) : (
                 item.type === "video" && (
