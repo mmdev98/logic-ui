@@ -47,6 +47,18 @@ export interface UseLightboxZoomResult {
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
   /** Puts the active image back at rest at once, without animation. */
   reset: () => void;
+  /**
+   * Lets the active image go as another item becomes active: it keeps its
+   * zoom while it slides out, and the zoom starts again at rest for the next
+   * one. `updateLeft` resets it once it is out of sight.
+   */
+  leave: () => void;
+  /**
+   * Resets the zoom of the images left by `leave` that no longer show in
+   * `viewport`. Once `settled`, it animates the ones still in sight back to
+   * rest. An image that is active again takes its zoom back.
+   */
+  updateLeft: (viewport: HTMLElement | null, settled: boolean) => void;
   /** Stops the running zoom and pull animations where they are, writing nothing. */
   stop: () => void;
   /** Writes the CSS variables again, to a popup or backdrop that just mounted. */
@@ -75,6 +87,10 @@ export function useLightboxZoom(
   const stopZoomRef = React.useRef<(() => void) | null>(null);
   const targetZoomRef = React.useRef<LightboxZoom | null>(null);
   const stopDismissRef = React.useRef<(() => void) | null>(null);
+  // Images left zoomed by `leave`, until they're out of sight.
+  const leftRef = React.useRef<
+    { element: HTMLElement; zoom: LightboxZoom; stop: (() => void) | null }[]
+  >([]);
 
   // The pull to dismiss and the zoom as CSS variables on the popup and the
   // backdrop, so the app's styles can follow them frame by frame.
@@ -206,14 +222,102 @@ export function useLightboxZoom(
     },
   );
 
+  /** Puts a left image back at rest and forgets it. */
+  const releaseLeft = (index: number, element: HTMLElement) => {
+    leftRef.current[index]?.stop?.();
+    leftRef.current.splice(index, 1);
+    element.style.transform = formatLightboxTransform(LIGHTBOX_IDENTITY_ZOOM);
+  };
+
+  const releaseAllLeft = () => {
+    for (let index = leftRef.current.length - 1; index >= 0; index -= 1)
+      releaseLeft(index, leftRef.current[index]!.element);
+  };
+
   const reset = useStableCallback(() => {
     stopZoom();
     stopDismiss();
+    releaseAllLeft();
     zoomRef.current = LIGHTBOX_IDENTITY_ZOOM;
     dismissRef.current = LIGHTBOX_IDENTITY_DISMISS;
     dismissProgressRef.current = 0;
     write();
   });
+
+  const leave = useStableCallback(() => {
+    // Where a zoom animation was going, so it slides out where it was headed.
+    const zoom = targetZoomRef.current ?? zoomRef.current;
+    stopZoom();
+    stopDismiss();
+    const entry = getActiveMedia();
+    const isAtRest = zoom.scale === 1 && zoom.x === 0 && zoom.y === 0;
+    if (entry?.zoomElement && !isAtRest) {
+      entry.zoomElement.style.transform = formatLightboxTransform(zoom);
+      leftRef.current.push({ element: entry.zoomElement, zoom, stop: null });
+    }
+    if (entry) {
+      entry.element.style.translate = "";
+      entry.element.style.scale = "";
+    }
+    zoomRef.current = LIGHTBOX_IDENTITY_ZOOM;
+    dismissRef.current = LIGHTBOX_IDENTITY_DISMISS;
+    dismissProgressRef.current = 0;
+    writeVariables();
+    setScale(LIGHTBOX_IDENTITY_ZOOM.scale);
+  });
+
+  const updateLeft = useStableCallback(
+    (viewport: HTMLElement | null, settled: boolean) => {
+      const left = leftRef.current;
+      if (left.length === 0) return;
+      const active = getActiveMedia()?.zoomElement;
+      const bounds = viewport?.getBoundingClientRect();
+      for (let index = left.length - 1; index >= 0; index -= 1) {
+        const item = left[index]!;
+        const { element } = item;
+        if (!element.isConnected) {
+          left.splice(index, 1);
+          continue;
+        }
+        // Swiped back to before it left sight: it is zoomed as it was, or at
+        // rest if it had started back there.
+        if (element === active) {
+          item.stop?.();
+          left.splice(index, 1);
+          if (!item.stop) zoomRef.current = item.zoom;
+          write();
+          continue;
+        }
+        const rect = element.getBoundingClientRect();
+        const inSight =
+          !bounds ||
+          (rect.right > bounds.left &&
+            rect.left < bounds.right &&
+            rect.bottom > bounds.top &&
+            rect.top < bounds.bottom);
+        if (!inSight) releaseLeft(index, element);
+        else if (settled && !item.stop) {
+          // Still in sight once the track has settled, beside the active
+          // item: it zooms back to rest.
+          const from = item.zoom;
+          item.stop = tweenLightbox(
+            LIGHTBOX_SETTLE_DURATION,
+            (progress) => {
+              element.style.transform = formatLightboxTransform({
+                scale: mix(from.scale, 1, progress),
+                x: mix(from.x, 0, progress),
+                y: mix(from.y, 0, progress),
+              });
+            },
+            () => {
+              const at = leftRef.current.indexOf(item);
+              if (at !== -1) leftRef.current.splice(at, 1);
+            },
+          );
+        }
+      }
+    },
+  );
 
   const stop = useStableCallback(() => {
     stopZoom();
@@ -229,6 +333,8 @@ export function useLightboxZoom(
     setDismiss,
     animateDismiss,
     reset,
+    leave,
+    updateLeft,
     stop,
     refresh: writeVariables,
   };

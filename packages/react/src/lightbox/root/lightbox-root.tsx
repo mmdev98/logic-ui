@@ -539,7 +539,9 @@ export function LightboxRoot<Item = unknown>(
       const nextValue = values[nextIndex];
       if (nextIndex === index || nextValue === undefined) return false;
       if (!setValue(nextValue, eventDetails)) return false;
-      zoom.reset();
+      // The image keeps its zoom while it slides out: the viewport resets it
+      // once it is out of sight.
+      zoom.leave();
       trackTransitionRef.current = transition;
       return true;
     },
@@ -1310,6 +1312,7 @@ export function LightboxRoot<Item = unknown>(
       getZoom: zoom.getZoom,
       setZoom: zoom.setZoom,
       animateZoom: zoom.animateZoom,
+      updateLeftZoom: zoom.updateLeft,
       setDismiss: zoom.setDismiss,
       animateDismiss: zoom.animateDismiss,
       setSwiping,

@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Lightbox } from "..";
 import {
   changeDetails,
+  clickButton,
   firePointer,
   ITEMS,
   loadImages,
@@ -131,6 +132,61 @@ describe("Lightbox.Viewport", () => {
     expect(getTrack().style.transform).not.toBe(rest);
     await wait(400);
     expect(getTrack().style.transform).toBe(rest);
+  });
+
+  /**
+   * Zooms the first image in, then stubs where it and the viewport are, as
+   * jsdom has no layout. `setInSight(false)` moves the image out of sight.
+   */
+  async function zoomFirstImage() {
+    await openLightboxAt("Open image 1 of 3");
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "+" });
+    await wait(400);
+    const image = screen.getByRole("img", { name: "First" });
+    const rect = (left: number) => new DOMRect(left, 0, ITEM_WIDTH, 300);
+    let inSight = true;
+    vi.spyOn(
+      screen.getByTestId("viewport"),
+      "getBoundingClientRect",
+    ).mockReturnValue(rect(0));
+    vi.spyOn(image, "getBoundingClientRect").mockImplementation(() =>
+      rect(inSight ? -100 : -ITEM_WIDTH - 10),
+    );
+    return {
+      image,
+      setInSight: (value: boolean) => {
+        inSight = value;
+      },
+    };
+  }
+
+  it("keeps a zoomed image zoomed until it has left the viewport", async () => {
+    render(<TestLightbox />);
+    const { image, setInSight } = await zoomFirstImage();
+    expect(image.style.transform).toContain("scale(1.5)");
+
+    await clickButton("Next image");
+    await wait(50);
+
+    // The next image starts at rest; the first slides out as it was.
+    expect(screen.getByTestId("zoom-value").textContent).toBe("100%");
+    expect(image.style.transform).toContain("scale(1.5)");
+
+    setInSight(false);
+    await wait(50);
+    expect(image.style.transform).toBe("translate3d(0px, 0px, 0px) scale(1)");
+  });
+
+  it("zooms an image still in sight back to rest once the track settles", async () => {
+    render(<TestLightbox />);
+    const { image } = await zoomFirstImage();
+
+    await clickButton("Next image");
+    await wait(50);
+    expect(image.style.transform).toContain("scale(1.5)");
+
+    await wait(800);
+    expect(image.style.transform).toBe("translate3d(0px, 0px, 0px) scale(1)");
   });
 
   it("leaves a press on a control inside a slide to that control", async () => {

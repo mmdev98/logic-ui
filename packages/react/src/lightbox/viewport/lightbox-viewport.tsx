@@ -104,6 +104,7 @@ export function LightboxViewport(
     zoomed,
     activationDirection,
     takeTrackTransition,
+    updateLeftZoom,
   } = root;
 
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -146,6 +147,8 @@ export function LightboxViewport(
       Math.round(movement * 100) / 100,
       Math.round(progress * 10000) / 10000,
     );
+    // An image that slid out zoomed is reset once it's out of sight.
+    root.updateLeftZoom(viewportRef.current, false);
     // Only re-render when a slide enters or leaves the visible window, not
     // on every frame. Keep both sides of a partially crossed slide mounted.
     const position = stride > 0 ? index - offsetRef.current / stride : index;
@@ -280,12 +283,16 @@ export function LightboxViewport(
         : Math.sign(index - shown.index);
       // A controlled app can accept later, after the track has started back.
       setOffset((isSwipe ? offsetRef.current : 0) + step * stride);
-      animateOffset(0, () => setJump(null));
+      animateOffset(0, () => {
+        setJump(null);
+        updateLeftZoom(viewportRef.current, true);
+      });
     } else {
       setOffset(0);
       setJump(null);
+      updateLeftZoom(viewportRef.current, true);
     }
-  }, [index, takeTrackTransition, setOffset, animateOffset]);
+  }, [index, takeTrackTransition, setOffset, animateOffset, updateLeftZoom]);
 
   useIsoLayoutEffect(writeTrack, [writeTrack, stride, metrics.directionSign]);
 

@@ -141,6 +141,11 @@ export interface LightboxRootContextValue {
     zoom: LightboxZoom,
     options?: { clamp?: boolean | undefined },
   ) => void;
+  /**
+   * Resets the zoom of the images that slid out zoomed once they're out of
+   * `viewport`; once the track has `settled`, animates the rest back to rest.
+   */
+  updateLeftZoom: (viewport: HTMLElement | null, settled: boolean) => void;
   setDismiss: (dismiss: LightboxDismiss, progress: number) => void;
   /** Animates the pull to dismiss to `dismiss`, then calls `onComplete`. */
   animateDismiss: (dismiss: LightboxDismiss, onComplete?: () => void) => void;
