@@ -208,6 +208,39 @@ describe("Lightbox.Media", () => {
     expect(media.style.transition).toBe("opacity 1s");
   });
 
+  it.each([
+    { fill: false, expected: ["400px", "300px"] },
+    { fill: true, expected: ["400px", "800px"] },
+  ])(
+    "takes the slide's shape with fill=$fill, not the media's",
+    async ({ fill, expected }) => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        400,
+      );
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(
+        800,
+      );
+      renderWithMedia((item) => (
+        <Lightbox.Media
+          data-testid={`media-${item.id}`}
+          width={800}
+          height={600}
+          fill={fill}
+        >
+          <img src={item.src} alt={item.alt} />
+        </Lightbox.Media>
+      ));
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: "Open image 1 of 3" }),
+        );
+      });
+      const media = await screen.findByTestId("media-a");
+
+      expect([media.style.width, media.style.height]).toEqual(expected);
+    },
+  );
+
   it("throws outside Lightbox.Slide", () => {
     const consoleError = vi
       .spyOn(console, "error")

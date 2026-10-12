@@ -35,15 +35,18 @@ export function getLightboxItemValue(item: unknown): LightboxItemValue {
   return id;
 }
 
-/** Width / height from the loaded size, then the given size, else `null`. */
+/**
+ * Width / height from the given size, then the loaded size, else `null`. A
+ * given size wins, so the caller can keep every slide the same shape.
+ */
 export function getLightboxAspectRatio(
   loaded: LightboxMediaSize | undefined,
   width: number | undefined,
   height: number | undefined,
 ): number | null {
-  const ratioWidth = loaded?.width || width;
-  const ratioHeight = loaded?.height || height;
-  return ratioWidth && ratioHeight ? ratioWidth / ratioHeight : null;
+  if (width && height) return width / height;
+  if (loaded?.width && loaded.height) return loaded.width / loaded.height;
+  return null;
 }
 
 /** Reads a numeric `width` or `height` prop, which HTML also allows as a string. */

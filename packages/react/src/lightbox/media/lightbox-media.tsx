@@ -48,13 +48,22 @@ export interface LightboxMediaProps extends useRender.ComponentProps<
   LightboxMediaState
 > {
   /**
-   * Natural width of the media, when known. With `height`, it gives the box
-   * the media's shape before it has loaded, so the image flies in at the
-   * right size.
+   * Width of the media, when known. With `height`, it sets the box's shape,
+   * before the media has loaded too, so the image flies in at the right size.
+   * Without both, the box takes the shape of the loaded media. A shape other
+   * than the media's keeps every slide the same: fit the media in it with
+   * `object-fit`.
    */
   width?: number | string | undefined;
-  /** Natural height of the media, when known. See `width`. */
+  /** Height of the media, when known. See `width`. */
   height?: number | string | undefined;
+  /**
+   * Whether the box fills the slide, inside its padding, whatever the shape
+   * of the media: `width`, `height` and the loaded size don't change it. Size
+   * the slide with CSS, and fit the media in it with `object-fit`.
+   * @default false
+   */
+  fill?: boolean | undefined;
 }
 
 /** Media events that tell the loading state or the natural size. */
@@ -86,7 +95,7 @@ function isSameLayout(a: LightboxMediaLayout | null, b: LightboxMediaLayout) {
  * Renders a `<div>` element.
  */
 export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
-  const { width, height, render, ref, ...elementProps } = props;
+  const { width, height, fill = false, render, ref, ...elementProps } = props;
 
   const {
     value,
@@ -112,11 +121,14 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
   );
   const mergedRef = useMergedRefs(ref, handleBox);
 
-  const aspectRatio = getLightboxAspectRatio(
-    mediaSizes.get(value),
-    toLightboxDimension(width),
-    toLightboxDimension(height),
-  );
+  // `null` fills the slide.
+  const aspectRatio = fill
+    ? null
+    : getLightboxAspectRatio(
+        mediaSizes.get(value),
+        toLightboxDimension(width),
+        toLightboxDimension(height),
+      );
 
   const measure = useStableCallback(() => {
     if (!slideElement) return;
@@ -133,7 +145,7 @@ export function LightboxMedia(props: LightboxMediaProps): React.ReactElement {
       0,
       slideHeight - paddingTop - (parseFloat(style.paddingBottom) || 0),
     );
-    // Until the size is known, the media fills the space.
+    // With `fill`, or until the size is known, the media fills the space.
     const ratio =
       aspectRatio ?? (contentHeight > 0 ? contentWidth / contentHeight : 1);
     const size = getLightboxContainedSize(ratio, contentWidth, contentHeight);

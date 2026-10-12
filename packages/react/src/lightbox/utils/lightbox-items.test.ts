@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clampLightboxIndex,
+  getLightboxAspectRatio,
   getLightboxNearestIndex,
   getLightboxSlideId,
 } from "./lightbox-items";
@@ -10,6 +11,50 @@ describe("clampLightboxIndex", () => {
     expect(clampLightboxIndex(-1, 3)).toBe(0);
     expect(clampLightboxIndex(5, 3)).toBe(2);
     expect(clampLightboxIndex(1, 0)).toBe(0);
+  });
+});
+
+describe("getLightboxAspectRatio", () => {
+  const loaded = { width: 800, height: 600 };
+
+  it.each([
+    {
+      name: "the given size over the loaded one",
+      loaded,
+      width: 9,
+      height: 16,
+      expected: 9 / 16,
+    },
+    {
+      name: "the loaded size without a given one",
+      loaded,
+      width: undefined,
+      height: undefined,
+      expected: 800 / 600,
+    },
+    {
+      name: "the loaded size with half a given one",
+      loaded,
+      width: 9,
+      height: undefined,
+      expected: 800 / 600,
+    },
+    {
+      name: "the given size before it loads",
+      loaded: undefined,
+      width: 9,
+      height: 16,
+      expected: 9 / 16,
+    },
+    {
+      name: "null without any size",
+      loaded: undefined,
+      width: undefined,
+      height: undefined,
+      expected: null,
+    },
+  ])("uses $name", ({ loaded: size, width, height, expected }) => {
+    expect(getLightboxAspectRatio(size, width, height)).toBe(expected);
   });
 });
 

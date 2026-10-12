@@ -1,3 +1,4 @@
+import { ownerWindow } from "@base-ui/utils/owner";
 import { type LightboxMediaSize } from "../types";
 import type { LightboxMediaStatus } from "../media/lightbox-media";
 
@@ -21,9 +22,10 @@ export function findLightboxMediaElement(box: Element): HTMLElement | null {
 }
 
 /**
- * Makes a media element fill its `Lightbox.Media` box, and keeps the
- * browser from dragging an image away (the gestures handle drags). Returns
- * the function that restores the element.
+ * Makes a media element fill its `Lightbox.Media` box, contained unless the
+ * app sets its own `object-fit`, and keeps the browser from dragging an image
+ * away (the gestures handle drags). Returns the function that restores the
+ * element.
  */
 export function fillLightboxMediaBox(element: HTMLElement): () => void {
   const { style } = element;
@@ -36,7 +38,9 @@ export function fillLightboxMediaBox(element: HTMLElement): () => void {
   style.display = "block";
   style.width = "100%";
   style.height = "100%";
-  style.objectFit = "contain";
+  // `fill`, the initial value, stretches the media: contain it instead.
+  const objectFit = ownerWindow(element).getComputedStyle(element).objectFit;
+  if (!objectFit || objectFit === "fill") style.objectFit = "contain";
   const isImage = element.tagName === "IMG";
   const draggable = element.getAttribute("draggable");
   if (isImage) element.setAttribute("draggable", "false");

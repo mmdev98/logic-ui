@@ -49,6 +49,24 @@ describe("fillLightboxMediaBox", () => {
     expect(image.hasAttribute("draggable")).toBe(false);
   });
 
+  it("keeps the app's object-fit", () => {
+    const style = document.createElement("style");
+    style.textContent = ".cover { object-fit: cover; }";
+    document.head.append(style);
+    const image = document.createElement("img");
+    image.className = "cover";
+    document.body.append(image);
+
+    const restore = fillLightboxMediaBox(image);
+
+    expect(image.style.objectFit).toBe("");
+    expect(getComputedStyle(image).objectFit).toBe("cover");
+
+    restore();
+    image.remove();
+    style.remove();
+  });
+
   it("leaves a video's draggable alone", () => {
     const video = document.createElement("video");
     fillLightboxMediaBox(video);
