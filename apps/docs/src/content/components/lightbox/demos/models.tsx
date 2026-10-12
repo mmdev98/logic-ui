@@ -255,13 +255,16 @@ function nextFrame() {
   });
 }
 
-/** A `<model-viewer>` for the weapon, made outside React, side on. */
+/**
+ * A `<model-viewer>` for the weapon, made outside React, side on with the
+ * muzzle to the left.
+ */
 function createModelElement(weapon: Weapon): ModelViewerElement {
   const element = document.createElement("model-viewer");
   element.setAttribute("src", weapon.src);
   element.setAttribute("alt", `3D model: ${weapon.name}`);
   element.setAttribute("loading", "eager");
-  element.setAttribute("camera-orbit", "90deg 80deg auto");
+  element.setAttribute("camera-orbit", "-90deg 80deg auto");
   element.setAttribute("auto-rotate-delay", "0");
   element.setAttribute("rotation-per-second", "30deg");
   element.setAttribute("interaction-prompt", "none");
