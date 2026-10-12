@@ -289,8 +289,9 @@ async function moveModel(
   const model = element as ModelViewerElement | undefined;
   if (!model || !host || model.parentElement === host) return;
   // Kept through the move: on its own it goes back to `camera-orbit`, and
-  // loses the angle it was dragged to.
-  const orbit = model.getCameraOrbit?.().toString();
+  // loses the angle it was dragged to. Only once loaded: before, the orbit
+  // isn't set from `camera-orbit` yet, and would replace it.
+  const orbit = model.loaded ? model.getCameraOrbit?.().toString() : undefined;
   if (orbit) model.cameraOrbit = orbit;
   model.toggleAttribute("camera-controls", host.dataset.viewer !== undefined);
   host.append(model);
