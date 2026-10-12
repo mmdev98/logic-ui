@@ -146,6 +146,8 @@ The rings take `crossfade`, since they show a face rather than the story: the ca
 
 Every control sits on the story card, inside `Lightbox.Media`: the bars, the author, pause, `Lightbox.Close`, the story's text in a `Lightbox.Caption`, and the reply field. So they slide with the person during a swipe, follow the pull to dismiss, and fly back into the ring with the card. Controls inside a slide get their clicks: a press that starts on a button, a link or a field isn't a gesture. `maxScale={1}` keeps the stories at their resting scale.
 
+Every story is the same shape: `Lightbox.Media` takes `fill`, so the card fills its slide whatever the shape of the photo or video, and `object-cover` on the media covers it. The viewport sets the size in CSS: 9:16 on a large screen, the whole screen on a phone.
+
 The stories turn like the faces of a cube, in CSS only. Each `Lightbox.Slide` has `--lightbox-slide-progress`, its distance from the centre in slides (`0` shown, `-1` one to the left, `1` one to the right), on every frame of a swipe, its settle and Next. The library places slides with `translate`, so their `transform` is free: here each person turns by the progress times 90° around the edge they share with the next one, with a `perspective` on `Lightbox.Viewport`. The same variable makes a fade (`opacity`), a stack, or a coverflow.
 
 ```tsx title="Cube transition"

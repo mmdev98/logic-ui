@@ -242,10 +242,11 @@ const local = {
   Popup:
     "fixed inset-0 cursor-default text-white outline-none select-none [--story-gutter:max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] [--story-height:min(46rem,calc(100dvh-2*var(--story-gutter)))] [--story-inline-gutter:max(0.75rem,env(safe-area-inset-left),env(safe-area-inset-right))] sm:[--story-gutter:max(2.5rem,env(safe-area-inset-top),env(safe-area-inset-bottom))]",
   // Exactly the size of a story, so the people meet edge to edge like the
-  // faces of a cube. The perspective reaches the slides turned in 3D, and it
-  // doesn't clip: neighbours wait edge-on, and the card leaves it when dragged.
+  // faces of a cube; the whole screen on a phone. The perspective reaches the
+  // slides turned in 3D, and it doesn't clip: neighbours wait edge-on, and
+  // the card leaves it when dragged.
   Viewport:
-    "absolute top-1/2 left-1/2 aspect-9/16 w-[min(calc(var(--story-height)*9/16),calc(100vw-2*var(--story-inline-gutter)))] -translate-1/2 cursor-default gap-x-0 select-none [perspective:1400px]",
+    "absolute inset-0 cursor-default gap-x-0 select-none [perspective:1400px] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:aspect-9/16 sm:w-[min(calc(var(--story-height)*9/16),calc(100vw-2*var(--story-inline-gutter)))] sm:-translate-1/2",
   /**
    * The cube: each person turns away around the edge they share with the
    * next one, by `--lightbox-slide-progress` times 90°. The pivot is on the
@@ -253,14 +254,16 @@ const local = {
    * comes in from the right, and the face turning away darkens.
    */
   Slide:
-    "cursor-default select-none [transform-origin:clamp(0%,calc(50%_-_var(--lightbox-slide-progress)*10000%),100%)_50%] [transform:rotateY(calc(var(--lightbox-slide-progress)*90deg))] [backface-visibility:hidden] [filter:brightness(calc(1_-_min(1,max(var(--lightbox-slide-progress),-1*var(--lightbox-slide-progress)))*0.6))] motion-reduce:[transform:none]",
-  // The card: the story with its controls on it. It clips them to its corners.
+    "cursor-default p-4 select-none [transform-origin:clamp(0%,calc(50%_-_var(--lightbox-slide-progress)*10000%),100%)_50%] [transform:rotateY(calc(var(--lightbox-slide-progress)*90deg))] [backface-visibility:hidden] [filter:brightness(calc(1_-_min(1,max(var(--lightbox-slide-progress),-1*var(--lightbox-slide-progress)))*0.6))] motion-reduce:[transform:none]",
+  // The card: the story with its controls on it, filling the slide whatever
+  // the shape of the photo or video, which covers it. It clips them to its
+  // corners, square on a phone, where it fills the screen.
   Media:
-    "group @container/story overflow-hidden rounded-3xl bg-neutral-900 [&>img]:object-cover [&>video]:object-cover",
+    "group @container/story overflow-hidden bg-neutral-900 sm:rounded-3xl [&>img]:object-cover [&>video]:object-cover",
   Header: cn(
     classes.shadeTop,
     onCard,
-    "absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-3 pb-12 @xs/story:px-4",
+    "absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-12 @xs/story:px-4 sm:pt-3",
   ),
   Segments: "flex gap-1",
   // One bar per story of the person: full once watched, filling while shown.
@@ -286,7 +289,7 @@ const local = {
   Footer: cn(
     classes.shadeBottom,
     onCard,
-    "absolute inset-x-0 bottom-0 flex flex-col items-start gap-4 px-3 pt-16 pb-3 @xs/story:px-4 @xs/story:pb-4",
+    "absolute inset-x-0 bottom-0 flex flex-col items-start gap-4 px-3 pt-16 pb-[max(0.75rem,env(safe-area-inset-bottom))] @xs/story:px-4 sm:pb-3 sm:@xs/story:pb-4",
   ),
   Text: `m-0 max-w-[85%] rounded-xl bg-black/45 px-3 py-2 text-[0.9375rem] leading-snug font-semibold tracking-tight text-pretty backdrop-blur-sm @xs/story:text-lg ${classes.enter}`,
   Reply: "flex w-full items-center gap-1",
@@ -389,8 +392,7 @@ function StoryCard(props: StoryCardProps) {
 
   return (
     <Lightbox.Media
-      width={900}
-      height={1600}
+      fill
       data-holding={holding || undefined}
       className={local.Media}
     >

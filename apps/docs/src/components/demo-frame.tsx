@@ -29,7 +29,7 @@ export function DemoFrame(props: {
         className,
       )}
     >
-      <div className="bg-dots flex min-h-48 flex-wrap items-center justify-center gap-4 bg-canvas p-8 md:p-12">
+      <div className="bg-dots flex min-h-48 flex-wrap items-center justify-center gap-4 bg-canvas p-3 sm:p-8 md:p-12">
         {children}
       </div>
 
