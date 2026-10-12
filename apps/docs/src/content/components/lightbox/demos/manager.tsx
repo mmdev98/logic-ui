@@ -90,6 +90,7 @@ export default function ExampleLightboxManager() {
                   className={`${classes.trigger} ${local.Tile}`}
                 >
                   <img
+                    loading="lazy"
                     src={getThumbnailSrc(photo)}
                     alt=""
                     className={classes.triggerImage}

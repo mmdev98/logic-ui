@@ -51,11 +51,13 @@ function AlbumCover(props: { album: Album }) {
       <div className={local.Album}>
         <div className={local.Stack}>
           <img
+            loading="lazy"
             src={getThumbnailSrc(third)}
             alt=""
             className={`${local.Behind} ${local.BehindLeft}`}
           />
           <img
+            loading="lazy"
             src={getThumbnailSrc(second)}
             alt=""
             className={`${local.Behind} ${local.BehindRight}`}
@@ -66,6 +68,7 @@ function AlbumCover(props: { album: Album }) {
             className={`${classes.trigger} ${local.Cover}`}
           >
             <img
+              loading="lazy"
               src={getThumbnailSrc(cover)}
               alt=""
               className={classes.triggerImage}

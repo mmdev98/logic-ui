@@ -54,6 +54,7 @@ export default function ExampleLightboxPhone() {
               className={`${classes.trigger} ${local.Tile}`}
             >
               <img
+                loading="lazy"
                 src={getThumbnailSrc(photo)}
                 alt=""
                 className={classes.triggerImage}
@@ -102,6 +103,7 @@ export default function ExampleLightboxPhone() {
                   className={local.Thumbnail}
                 >
                   <img
+                    loading="lazy"
                     src={getThumbnailSrc(photo)}
                     alt=""
                     className="size-full object-cover"

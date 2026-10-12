@@ -20,6 +20,7 @@ export default function ExampleLightboxMinimal() {
             className={`${classes.trigger} aspect-square w-full rounded-xl sm:size-24`}
           >
             <img
+              loading="lazy"
               src={getThumbnailSrc(photo)}
               alt=""
               className={classes.triggerImage}

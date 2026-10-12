@@ -28,7 +28,12 @@ export default function ExampleLightboxSingleImage() {
           aria-label="View Maya's photo"
           className={`${classes.trigger} ${local.Avatar}`}
         >
-          <img src={portrait.src} alt="" className={classes.triggerImage} />
+          <img
+            loading="lazy"
+            src={portrait.src}
+            alt=""
+            className={classes.triggerImage}
+          />
         </Lightbox.Trigger>
         <div>
           <p className={local.Name}>Maya Lindqvist</p>

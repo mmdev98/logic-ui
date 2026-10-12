@@ -56,6 +56,7 @@ export default function ExampleLightboxVideo() {
               </React.Fragment>
             ) : (
               <img
+                loading="lazy"
                 src={getThumbnailSrc(item)}
                 alt=""
                 className={classes.triggerImage}

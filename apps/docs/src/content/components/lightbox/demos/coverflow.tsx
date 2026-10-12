@@ -110,7 +110,12 @@ export default function ExampleLightboxCoverflow(): React.ReactElement {
               aria-label={`Open ${album.title} by ${album.artist}`}
               className={cn(classes.trigger, local.Cover)}
             >
-              <img src={album.thumb} alt="" className={classes.triggerImage} />
+              <img
+                loading="lazy"
+                src={album.thumb}
+                alt=""
+                className={classes.triggerImage}
+              />
             </Lightbox.Trigger>
             <div>
               <p className={local.AlbumTitle}>{album.title}</p>

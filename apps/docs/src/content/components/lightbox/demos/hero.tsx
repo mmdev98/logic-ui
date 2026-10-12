@@ -157,13 +157,17 @@ const shortcuts = [
   ["Drag", "Swipe, or close"],
 ];
 
-/** A still of an item: the image's thumbnail, or a frame of the video. */
+/**
+ * A still of an item: the image's thumbnail, or a frame of the video. `lazy`
+ * for the ones out of sight when the page loads.
+ */
 function Preview(props: {
   item: MediaItem;
   large?: boolean;
+  lazy?: boolean;
   className: string;
 }) {
-  const { item, large, className } = props;
+  const { item, large, lazy, className } = props;
   if (item.type === "video") {
     return (
       <video
@@ -177,6 +181,7 @@ function Preview(props: {
   }
   return (
     <img
+      loading={lazy ? "lazy" : undefined}
       src={large ? item.src : getThumbnailSrc(item)}
       alt=""
       className={className}
@@ -326,7 +331,11 @@ export default function ExampleLightbox() {
                   aria-label={item.alt}
                   className={local.Thumbnail}
                 >
-                  <Preview item={item} className="size-full object-cover" />
+                  <Preview
+                    item={item}
+                    lazy
+                    className="size-full object-cover"
+                  />
                   {item.type === "video" && (
                     <PlayIcon className={local.ThumbnailBadge} />
                   )}

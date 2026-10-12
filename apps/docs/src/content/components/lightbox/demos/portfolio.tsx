@@ -94,6 +94,7 @@ export default function ExampleLightboxPortfolio() {
                   className={`${classes.trigger} ${local.CardImage}`}
                 >
                   <img
+                    loading="lazy"
                     src={getThumbnailSrc(photo)}
                     alt=""
                     className={classes.triggerImage}
@@ -177,6 +178,7 @@ export default function ExampleLightboxPortfolio() {
                       className={local.Thumbnail}
                     >
                       <img
+                        loading="lazy"
                         src={getThumbnailSrc(photo)}
                         alt=""
                         className={local.ThumbnailImage}

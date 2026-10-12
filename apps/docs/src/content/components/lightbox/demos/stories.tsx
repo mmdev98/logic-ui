@@ -650,6 +650,7 @@ export default function ExampleLightboxStories(): React.ReactElement {
                   className={local.Trigger}
                 >
                   <img
+                    loading="lazy"
                     src={person.avatar}
                     alt=""
                     className={classes.triggerImage}
