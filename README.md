@@ -9,7 +9,7 @@ already on Base UI can switch without changing its imports. Alias it in your app
 ```json
 {
   "dependencies": {
-    "@base-ui/react": "npm:@logic-ui/react@0.3.0"
+    "@base-ui/react": "npm:@logic-ui/react@0.4.0"
   }
 }
 ```

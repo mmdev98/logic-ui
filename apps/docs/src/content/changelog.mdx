@@ -1,6 +1,22 @@
 The package follows semver. Until `1.0.0`, a minor version (`0.x.0`) may break the API; each
 breaking change is listed under its release.
 
+## v0.4.0
+
+October 22, 2026.
+
+### New features
+
+- **[Cropper](/docs/components/cropper)**, at `@logic-ui/react/cropper`: an image cropper
+  ported from advanced-cropper and react-advanced-cropper, in one headless entry point.
+  `Cropper.Root`, `Viewport`, `Image`, `Stencil`, `Handle`, `Grid` and `Preview` render no
+  styles: they expose `data-*` attributes and CSS variables. One pointer gesture engine resizes
+  from corners and edges, moves the crop, pans the image, pinches and zooms with the wheel.
+  `ZoomIn`, `ZoomOut`, `Rotate`, `Flip` and `Reset` act on it, the keyboard moves, resizes
+  and zooms, and `actionsRef` draws the crop with `getCanvas()`. `stencilSize` keeps the crop
+  a fixed size on screen while the image moves behind it, and `Cropper.Viewport`'s padding
+  keeps the crop clear of bars laid over it.
+
 ## v0.3.0
 
 October 12, 2026.
