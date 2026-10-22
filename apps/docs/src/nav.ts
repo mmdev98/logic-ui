@@ -114,6 +114,15 @@ export const sections: DocSection[] = [
         badge: "preview",
       },
       {
+        slug: "components/cropper",
+        title: "Cropper",
+        description:
+          "An image cropper with handles, a fixed or free aspect ratio, zoom, rotation and touch gestures.",
+        file: "components/cropper/index.mdx",
+        api: "cropper",
+        badge: "preview",
+      },
+      {
         slug: "components/lightbox",
         title: "Lightbox",
         description:

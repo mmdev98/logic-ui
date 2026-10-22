@@ -1,0 +1,250 @@
+<Demo src="./demos/hero.tsx" />
+
+## Usage guidelines
+
+- **Everything is headless:** the parts place the image and the crop, and handle the gestures, the keyboard and the math. How the crop, the handles, the grid and the darkened area look is yours, through data attributes.
+- **One gesture engine:** dragging a handle, the crop or the image, pinching and the wheel are handled together in `Cropper.Viewport`, with pointer events, so mouse, pen and touch work the same and never fight over a press.
+- **Image pixels in, image pixels out:** `defaultCoordinates`, `minWidth`, `onCoordinatesChange` and `getCanvas()` all speak in pixels of the image, whatever its size on screen.
+- **Ported from Advanced Cropper:** the algorithms come from [advanced-cropper](https://github.com/advanced-cropper/advanced-cropper) and [react-advanced-cropper](https://github.com/advanced-cropper/react-advanced-cropper) by Norserium, merged into one entry point. The rectangle and circle stencils are one `Cropper.Stencil`, lines and handles one `Cropper.Handle`, and `FixedCropper` is the `stencilSize` prop.
+
+## Anatomy
+
+Import the component and assemble its parts:
+
+```jsx title="Anatomy"
+import { Cropper } from "@logic-ui/react/cropper";
+
+<Cropper.Root>
+  <Cropper.Viewport>
+    <Cropper.Image />
+    <Cropper.Stencil>
+      <Cropper.Grid />
+      <Cropper.Handle position="top-left" />
+    </Cropper.Stencil>
+  </Cropper.Viewport>
+  <Cropper.Preview />
+  <Cropper.ZoomIn />
+  <Cropper.ZoomOut />
+  <Cropper.Rotate />
+  <Cropper.Flip />
+  <Cropper.Reset />
+</Cropper.Root>;
+```
+
+## Examples
+
+### Getting started
+
+`Cropper.Root` loads `src` and holds the crop. Give `Cropper.Viewport` a size: the image fits in it and the crop starts at 80% of the image. Without handles, the crop keeps its size and moves.
+
+<Demo src="./demos/minimal.tsx" />
+
+```tsx title="A square crop"
+<Cropper.Root src={url} aspectRatio={1}>
+  <Cropper.Viewport className="h-96 w-full">
+    <Cropper.Image />
+    <Cropper.Stencil className="shadow-[0_0_0_9999px_rgb(0_0_0/0.6)] outline outline-white" />
+  </Cropper.Viewport>
+</Cropper.Root>
+```
+
+### Handles
+
+`Cropper.Handle` resizes the crop from a corner (`top-left`, `top-right`, `bottom-right`, `bottom-left`) or an edge (`top`, `right`, `bottom`, `left`). It has `data-position`: place it with that. An edge handle can be a strip along the edge, as in the demo above, or a small bar in its middle. Hold Shift while dragging to keep the aspect ratio.
+
+```tsx title="A corner bracket, like a phone's editor"
+<Cropper.Handle
+  position="top-left"
+  className="absolute top-0 left-0 size-8 border-t-[3px] border-l-[3px] border-white"
+/>
+```
+
+### Aspect ratio and size
+
+`aspectRatio` takes a number or a range, `{ minimum: 1, maximum: 2 }`. `minWidth`, `minHeight`, `maxWidth` and `maxHeight` are in image pixels. When they change, the crop is fitted to them around its center.
+
+```tsx title="Between square and 2:1, at least 200 px wide"
+<Cropper.Root src={url} aspectRatio={{ minimum: 1, maximum: 2 }} minWidth={200}>
+```
+
+### Fixed stencil
+
+`stencilSize` keeps the crop's size on screen: the image moves and zooms behind it, and the crop can't be moved or resized. Round it with `rounded-full` for a profile picture, and drive the zoom from a Base UI slider with `useCropperRootContext()` and `useCropperRootStateContext()`.
+
+<Demo src="./demos/avatar.tsx" />
+
+```tsx title="A zoom slider"
+const { actions } = useCropperRootContext();
+const { zoom } = useCropperRootStateContext();
+
+<Slider.Root
+  min={0}
+  max={1}
+  step={0.01}
+  value={zoom}
+  onValueChange={(value) => actions.setZoom(value as number)}
+>
+```
+
+### Where the image may go
+
+`imageRestriction` sets how far the image can move and zoom out:
+
+- `"fit-area"` (default): the image can't be zoomed out past the viewport, and the crop stays on the image.
+- `"fill-area"`: the image always fills the viewport.
+- `"stencil"`: only the crop stays on the image, the view is free. Best with `stencilSize`.
+- `"none"`: no limit; the crop can leave the image, and `getCanvas()` fills the rest with `fillColor`.
+
+### Getting the result
+
+`actionsRef` receives the actions. `getCanvas()` draws the crop on a canvas, rotated and flipped, at its size in image pixels or at the size you ask: `width`, `height`, `maxWidth`, `maxHeight` or `maxArea`. For an image from another origin, the server must send CORS headers: `crossOrigin` is `"anonymous"` by default.
+
+```tsx title="Upload the crop"
+const actionsRef = React.useRef<CropperRootActions>(null);
+
+async function upload() {
+  const canvas = actionsRef.current?.getCanvas({ maxWidth: 1600 });
+  canvas?.toBlob((blob) => blob && send(blob), "image/webp");
+}
+
+<Cropper.Root src={url} actionsRef={actionsRef}>
+```
+
+`onCoordinatesChange` reports the crop in whole image pixels as it changes; `onCoordinatesCommitted` once a gesture ends or after a button or key press, like a slider's `onValueCommitted`. Both receive `eventDetails.reason`: `"handle-drag"`, `"wheel"`, `"keyboard"`, `"zoom-in-press"` …
+
+To send the crop to a server that crops, use `getCoordinates()` with `getState().transforms` for the rotation and flip.
+
+### In a dialog
+
+Put the cropper in a Base UI `Dialog.Popup` to crop a photo the user picks: give the file an object URL as `src`, open the dialog, and read `getCanvas()` when they save. `Cropper.Viewport` measures itself when the popup opens, and again if its size changes, so nothing has to wait for the dialog.
+
+The profile card below takes a click or a dropped image on its cover or its photo, and opens an editor shaped for each: a fixed circle for the photo (`stencilSize` from the viewport's size), a 3:1 frame for the cover. The editor is a sheet on phones and a card on larger screens, with frosted bars over the photo, a zoom dial, rotate, flip and reset, and a live `Cropper.Preview` at the result's shape. It shows a spinner while the image loads and a message when it can't be opened (`data-loading`, `data-error`), and Save waits for the image.
+
+<Demo src="./demos/dialog.tsx" />
+
+```tsx title="Crop a chosen file"
+function choose(event: React.ChangeEvent<HTMLInputElement>) {
+  const file = event.target.files?.[0];
+  if (file) {
+    setSrc(URL.createObjectURL(file));
+    setOpen(true);
+  }
+}
+
+<Dialog.Root open={open} onOpenChange={setOpen}>
+  <Dialog.Portal>
+    <Dialog.Backdrop />
+    <Dialog.Popup>
+      <Dialog.Title>Crop your photo</Dialog.Title>
+      <Cropper.Root src={src} aspectRatio={1} actionsRef={actionsRef}>
+        <Cropper.Viewport className="h-80">…</Cropper.Viewport>
+        <Dialog.Close>Cancel</Dialog.Close>
+        <button onClick={save}>Save</button>
+      </Cropper.Root>
+    </Dialog.Popup>
+  </Dialog.Portal>
+</Dialog.Root>;
+```
+
+Revoke the object URL (`URL.revokeObjectURL`) once it is no longer shown.
+
+### Account picture, step by step
+
+A profile picture flow in the style of Google's account settings, in Material 3's dark colours: one dialog walks through the steps, each sliding in from the side it comes from.
+
+1. **Profile picture** shows the current picture, with **Change** and **Remove**; removing asks first and shows what replaces it.
+2. **Change profile picture** offers your photos in a grid, or an upload: drag a photo onto the drop zone or pick one, in Base UI `Tabs` with a sliding indicator.
+3. **Crop & rotate** shows a square crop with the circle people will see, round handles on its corners, and **Rotate** and **Reset**. **Save as profile picture** draws 512 × 512 px with `getCanvas()`, shows its progress, and returns to the first step with the new picture.
+
+<Demo src="./demos/account.tsx" />
+
+### In a lightbox
+
+Open a photo and press **Edit** to crop it full screen without leaving the viewer, like a phone's gallery: frosted bars over the photo, aspect presets, a zoom dial, rotate, flip and reset, with the crop's size in pixels as you drag. **Done** puts the cropped photo in the gallery, and it flies back to its tile; editing it again starts from the same crop, **Revert** brings the original back, and the cropped photo can be downloaded.
+
+The editor is a `Cropper` laid over a [Lightbox](/docs/components/lightbox) viewer inside `Lightbox.Popup`, so the dialog keeps focus in it. It keeps its keys to itself: the arrows move the crop instead of the photo, and Esc cancels the edit instead of closing the viewer.
+
+<Demo src="./demos/lightbox.tsx" />
+
+```tsx title="Edit the photo shown, inside the popup"
+<Lightbox.Popup>
+  <Lightbox.Viewport>…</Lightbox.Viewport>
+  <button onClick={() => setEditing(true)}>Edit</button>
+  {editing && (
+    // Keys pressed in the editor stay there: Esc cancels the edit.
+    <div
+      className="absolute inset-0 bg-black"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setEditing(false);
+        event.stopPropagation();
+      }}
+    >
+      <Cropper.Root src={original.src} actionsRef={actionsRef}>
+        …
+      </Cropper.Root>
+    </div>
+  )}
+</Lightbox.Popup>
+```
+
+Saving replaces the item in `items` with the cropped image (`getCanvas().toDataURL()`) and its new `width` and `height`; the item keeps its value, so the viewer stays on it.
+
+### Restoring a crop
+
+`defaultCoordinates` sets the first crop in image pixels; a size without `left` and `top` is centered. `defaultVisibleArea` sets the first view, and `defaultTransforms` the rotation and flip. To restore a crop, save `getState()` and pass its `coordinates`, `visibleArea` and `transforms` back as these defaults: they fit the viewport whatever its size.
+
+### Preview
+
+`Cropper.Preview` shows the crop live, scaled to fit it. Give it the crop's shape with `aspect-(--cropper-aspect-ratio)`, set on `Cropper.Root`.
+
+```tsx title="A live preview"
+<Cropper.Preview className="aspect-(--cropper-aspect-ratio) w-40 rounded" />
+```
+
+### Animations
+
+Buttons, keys and the end of a gesture move the crop and the image to their new place at once, and set `data-transitioning` on the parts for `transitionDuration` (350 ms). Animate them with it and `--cropper-transition-duration`; drags wait for the animation to end. Set `transitionDuration={0}` to turn it off.
+
+```tsx title="Slide to the new place"
+<Cropper.Image className="data-transitioning:transition-transform data-transitioning:duration-(--cropper-transition-duration)" />
+<Cropper.Stencil className="data-transitioning:transition-[width,height,transform] data-transitioning:duration-(--cropper-transition-duration)" />
+```
+
+### Styling
+
+Every part is unstyled. Style the cropper with Tailwind (or any CSS), using the parts' data attributes and CSS variables:
+
+- `Cropper.Root`, `Cropper.Viewport` and `Cropper.Preview` have `data-loading`, `data-loaded` and `data-error`. Fade the viewport in with `data-loaded`, and show a message with `data-error`.
+- `Cropper.Root` has `--cropper-image-aspect-ratio`, to give `Cropper.Viewport` the image's shape (`aspect-(--cropper-image-aspect-ratio) max-h-96`), and `--cropper-aspect-ratio`, the crop's.
+- `Cropper.Viewport` clips its content and handles touch itself (`overflow: hidden`, `touch-action: none`). It has `data-interacting` during a drag, a pinch or a wheel zoom: `data-interacting:cursor-grabbing`.
+- `Cropper.Viewport`'s padding is room the crop and the fitted image stay out of, while a zoomed or moved image still shows there. Make it full screen and pad it by the height of bars laid over it: the photo runs under them, as in the [lightbox example](#in-a-lightbox), where the bars are frosted with `bg-neutral-950/50 backdrop-blur-xl`.
+- `Cropper.Stencil` is placed with `transform`, `width` and `height`. Darken the image around it with a large shadow, `shadow-[0_0_0_9999px_rgb(0_0_0/0.6)]`, and shape it with `rounded-full`. It has `data-movable`, `data-moving` and `data-resizing`.
+- `Cropper.Grid` renders `rows` × `columns` cells with `data-row` and `data-column`; lay them out with `grid-cols-[repeat(var(--cropper-grid-columns),minmax(0,1fr))]` and the same for rows (the variables hold counts, so they need `repeat()`) and show them with `data-interacting`.
+- `Cropper.Handle` has `data-position` and `data-resizing` while dragged.
+
+### Keyboard
+
+`Cropper.Stencil` and every `Cropper.Handle` are focusable:
+
+- On the crop, the arrow keys move it by 10 px on screen, 50 with Shift, and + and − zoom.
+- On a handle, the arrow keys move its corner or edge, 50 px with Shift.
+
+## API reference
+
+<ApiReference
+  component="cropper"
+  parts={[
+    "Root",
+    "Viewport",
+    "Image",
+    "Stencil",
+    "Handle",
+    "Grid",
+    "Preview",
+    "ZoomIn",
+    "ZoomOut",
+    "Rotate",
+    "Flip",
+    "Reset",
+  ]}
+/>
