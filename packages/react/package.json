@@ -76,6 +76,10 @@
       "types": "./build/context-menu/index.d.ts",
       "default": "./build/context-menu/index.js"
     },
+    "./cropper": {
+      "types": "./build/cropper/index.d.ts",
+      "default": "./build/cropper/index.js"
+    },
     "./csp-provider": {
       "types": "./build/csp-provider/index.d.ts",
       "default": "./build/csp-provider/index.js"
